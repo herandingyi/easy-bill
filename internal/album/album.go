@@ -35,7 +35,7 @@ func FormatText(header []string, body [][]string) string {
 	table.SetHeader(data[0])
 	table.SetBorder(false)
 	table.SetAutoWrapText(false)
-
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	// Add the rows to the table
 	for _, row := range data[1:] {
 		table.Append(row)
