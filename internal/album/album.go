@@ -46,8 +46,8 @@ func FormatText(header []string, body [][]string) string {
 }
 
 func ToImage(header []string, text, filename string) (err error) {
-	fontPath := "Arial.ttf"
-	fontSize := 48
+	fontPath := "./simsun.ttc"
+	fontSize := 14
 	textColor := color.Black
 	backgroundColor := color.White
 	texts := strings.Split(text, "\n")

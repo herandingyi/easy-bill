@@ -10,6 +10,7 @@ RUN git clone --branch main https://github.com/herandingyi/easy-bill.git  \
 FROM golang
 WORKDIR /app
 COPY --from=builder /app/easy-bill/easy-bill /app/easy-bill
+COPY --from=builder /app/easy-bill/simsun.ttc /app/simsun.ttc
 RUN chmod +x /app/easy-bill
 
 CMD ["/app/easy-bill"]

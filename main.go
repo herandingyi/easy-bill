@@ -76,10 +76,20 @@ func main() {
 					err = errors.New("请输入姓名不能超过五个字符")
 					return
 				}
-				_, err = db.Exec("insert into user(id,name,status) values(?,?,1) on duplicate key update status=1", m.Sender.ID, name)
-				if err != nil {
+				_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {
+					_, err = s.Exec("insert "+
+						"into user(id,name,status,timezone,group_name) values(?,?,1,0,?)"+
+						" on duplicate key update"+
+						" status=1"+
+						",group_name=?",
+						m.Sender.ID, name,
+						internal.GetGroupName(m),
+						internal.GetGroupName(m))
+					if err != nil {
+						return
+					}
 					return
-				}
+				})
 			} else {
 				err = errors.New("姓名只能包含小写字母")
 				return
@@ -93,7 +103,7 @@ func main() {
 		}
 	})
 	// 设置时区
-	handler.Reg(bot, "/tz", func(m *telebot.Message) {
+	handler.Reg(bot, "/timezone", func(m *telebot.Message) {
 		var err error
 		defer func() {
 			if err != nil {
@@ -165,8 +175,69 @@ func main() {
 			}
 		}()
 	}
-	handler.Reg(bot, "/l", func(m *telebot.Message) { listFunc(m, false) })
-	handler.Reg(bot, "/detail", func(m *telebot.Message) { listFunc(m, true) })
+
+	handler.Reg(bot, "/help", func(m *telebot.Message) {
+		if m.Chat.Type == telebot.ChatGroup {
+			bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(
+				"/join NAME 加入EASY-BILL; 例子1: /join tk\n",
+				"/a AA账单; 例子1: /a tk5100,rzt | 例子2: /a tk5.1,rzt u (尾部的u代表美元)\n",
+				"/p 向某人支付; 例子1: /p tk5100,rzt | 例子2: /p tk5.1,rzt u \n",
+				"/l 账单; 例子1: /l | 例子2: /l u \n",
+				"/d 分数形式账单; 例子1: /d | 例子2: /d u\n",
+				"/group_name 昵称和群名对应表\n",
+				"/help 帮助\n\n",
+				"支持货币表 k: 瑞尔(默认货币); u：美元",
+			))
+		} else if m.Chat.Type == telebot.ChatPrivate {
+			bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(
+				"/l 个人账单; 例子1: /l \n",
+				"/d 分数形式个人账单; 例子1: /d \n",
+				"/timezone 设置个人时区; 例子1: /timezone 8\n",
+				"/help 帮助\n\n",
+				"支持货币表 k: 瑞尔(默认货币); u：美元",
+			))
+		}
+	})
+	handler.Reg(bot, "/l", func(m *telebot.Message) {
+		if m.Chat.Type == telebot.ChatGroup {
+			listFunc(m, false)
+		} else if m.Chat.Type == telebot.ChatPrivate {
+			privateListFunc(m, false)
+		}
+	})
+	handler.Reg(bot, "/detail", func(m *telebot.Message) {
+		if m.Chat.Type == telebot.ChatGroup {
+			listFunc(m, true)
+		} else if m.Chat.Type == telebot.ChatPrivate {
+			privateListFunc(m, true)
+		}
+	})
+	handler.Reg(bot, "/d", func(m *telebot.Message) {
+		if m.Chat.Type == telebot.ChatGroup {
+			listFunc(m, true)
+		} else if m.Chat.Type == telebot.ChatPrivate {
+			privateListFunc(m, true)
+		}
+	})
+	handler.Reg(bot, "/group_name", func(m *telebot.Message) {
+		var err error
+		if m.Chat.Type != telebot.ChatGroup {
+			return
+		}
+		defer func() {
+			if err != nil {
+				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+			} else {
+				var album telebot.Album
+				album, err = internal.GroupNameList(db)
+				if err != nil {
+					bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+				} else {
+					bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, album)
+				}
+			}
+		}()
+	})
 	//支付/收款
 	handler.Reg(bot, "/p", func(m *telebot.Message) {
 		var err error
@@ -293,6 +364,7 @@ func main() {
 				}
 			}
 		}()
+
 		command := strings.ToLower(strings.TrimSpace(m.Payload))
 		currencyType, command = internal.Parse(command)
 		//  hcx7500, hr, dsj100
@@ -339,6 +411,10 @@ func main() {
 		}
 
 		_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {
+			err = internal.UpdateGroupName(s, m)
+			if err != nil {
+				return
+			}
 			userCount := int64(len(names))
 			userIds := make([]int64, 0, userCount)
 			userId2Acount := make(map[int64]*big.Rat)

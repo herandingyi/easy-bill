@@ -13,6 +13,22 @@ import (
 	"xorm.io/xorm"
 )
 
+func GroupNameList(db *xorm.Engine) (a telebot.Album, err error) {
+	users := make([]*models.User, 0, 5)
+	err = db.SQL("SELECT " +
+		" `name`," +
+		" `group_name`" +
+		" FROM user").Find(&users)
+	if err != nil {
+		return nil, err
+	}
+	body := make([][]string, 0, 5)
+	for _, user := range users {
+		body = append(body, []string{user.Name, user.GroupName})
+	}
+	return album.ToAlbum([]string{"NAME", "GROUP-NAME"}, body)
+}
+
 func MenuList(db *xorm.Engine) (telebot.Album, error) {
 	type Menu struct {
 		Code     string
@@ -85,6 +101,16 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool) (telebot.Album, 
 		}
 		if !detail && wallet.AccountDenominator != 0 && float64(wallet.AccountNumerator)/float64(wallet.AccountDenominator) != float64(wallet.AccountNumerator/wallet.AccountDenominator) {
 			wallet.Remain = fmt.Sprintf("%0.2f", float64(wallet.AccountNumerator)/float64(wallet.AccountDenominator)/float64(multiInt))
+		}
+		if !detail {
+			if wallet.AccountDenominator == 0 {
+				continue
+			}
+			f := float64(wallet.AccountNumerator) / float64(wallet.AccountDenominator)
+			f = math.Abs(f)
+			if f < 0.000000001 {
+				continue
+			}
 		}
 		body = append(body, []string{wallet.Name, wallet.Remain})
 	}
@@ -168,7 +194,10 @@ func PrivateList(db *xorm.Engine, userId int64, detail bool, page int) (a telebo
 		}
 		// 根据用户设定的时区，进行时间转换
 		log.CreateTime = log.CreateTime.Add(time.Duration(timezone) * time.Hour)
-		body = append(body, []string{log.CreateTime.Format("06-01-02 15:04:05"), CurrencyToken[log.Type] + beforeStr, CurrencyToken[log.Type] + incStr, CurrencyToken[log.Type] + afterStr})
+		body = append(body, []string{log.CreateTime.Format("06-01-02 15:04:05") + " " + CurrencyName[log.Type],
+			beforeStr,
+			incStr,
+			afterStr})
 	}
 	return album.ToAlbum([]string{pageTitle + " DATE", "BEFORE", "INC", "AFTER"}, body)
 }

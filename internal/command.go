@@ -12,7 +12,7 @@ import (
 )
 
 func Parse(name string) (currencyType int, remain string) {
-	name = strings.TrimSpace(name)
+	name = " " + strings.TrimSpace(name)
 	tokens := []string{" u", " U", " usd", " USD", " 刀", " $", " 美元", " 美金"}
 	var token string
 	currencyType = 2
