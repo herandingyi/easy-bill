@@ -4,3 +4,9 @@ go_build_tg_account_book
 .vscode
 /go_build_easy_bill
 /go_build_command_go
+data
+/easy-bill
+id_cache.db
+*.nb3
+id_cache.db-shm
+id_cache.db-wal
