@@ -1,0 +1,6 @@
+output.png
+go_build_tg_account_book
+.idea
+.vscode
+/go_build_easy_bill
+/go_build_command_go
