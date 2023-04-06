@@ -28,11 +28,12 @@ func Parse(name string) (currencyType int, remain string) {
 
 func InsertCommand(s *xorm.Session, c *models.Command) (id int64, err error) {
 	type MyUser struct {
-		Id   int64
-		Name string
+		Id        int64
+		Name      string
+		GroupName string
 	}
 	users := make([]MyUser, 0, 5)
-	err = s.SQL("select id,name from user").Find(&users)
+	err = s.SQL("select `id`,`name`,`group_name` from user").Find(&users)
 	if err != nil {
 		return 0, err
 	}
