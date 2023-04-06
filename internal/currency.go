@@ -36,12 +36,13 @@ var MinCurrencyTokenMustSpecify = []int64{0,
 	100, // 小于 100  KHR 时必须指定货币类型
 }
 
+const defaultCurrencyType = 2
+
 func Parse(name string) (currencyType int, remain string, useDefaultCurrencyType bool) {
 	name = " " + strings.TrimSpace(name)
 	var tokens []string
 	var token string
 	useDefaultCurrencyType = true
-	defaultCurrencyType := 2
 	for currencyType, tokens = range CurrencyTokens {
 		if currencyType == 0 {
 			continue
