@@ -59,9 +59,9 @@ func main() {
 		var name string
 		defer func() {
 			if err != nil {
-				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
-				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, name+"成功加入")
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, name+"成功加入")
 			}
 
 		}()
@@ -107,9 +107,9 @@ func main() {
 		var err error
 		defer func() {
 			if err != nil {
-				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
-				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, "时区设置成功,时区为 "+m.Payload)
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, "时区设置成功,时区为 "+m.Payload)
 			}
 		}()
 		if m.Chat.Type == telebot.ChatPrivate {
@@ -131,14 +131,14 @@ func main() {
 		page := 1
 		defer func() {
 			if err != nil {
-				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
 				var bill telebot.Album
 				bill, err = internal.PrivateList(db, int64(m.Sender.ID), detail, page)
 				if err != nil {
-					bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
-					bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
+					_, _ = bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
 				}
 			}
 		}()
@@ -161,40 +161,44 @@ func main() {
 		}
 		defer func() {
 			if err != nil {
-				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
 				var bill telebot.Album
 				var currencyType int
 				currencyType, _ = internal.Parse(strings.TrimSpace(m.Payload))
 				bill, err = internal.WalletList(db, currencyType, detail)
 				if err != nil {
-					bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
-					bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
+					_, _ = bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
 				}
 			}
 		}()
 	}
 
 	handler.Reg(bot, "/help", func(m *telebot.Message) {
+		groupHelp := fmt.Sprint(
+			"-----群中的指令帮助----\n\n",
+			"/join NAME 加入EASY-BILL; 例子1: /join tk\n",
+			"/a AA账单; 例子1: /a tk5100,rzt | 例子2: /a tk5.1,rzt u (尾部的u代表美元)\n",
+			"/p 向某人支付; 例子1: /p tk5100,rzt | 例子2: /p tk5.1,rzt u \n",
+			"/l 账单; 例子1: /l | 例子2: /l u \n",
+			"/d 分数形式账单; 例子1: /d | 例子2: /d u\n",
+			"/group_name 昵称和群名对应表\n",
+			"/help 帮助\n\n",
+			"支持货币表 k: 瑞尔(默认货币); u：美元",
+		)
 		if m.Chat.Type == telebot.ChatGroup {
-			bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(
-				"/join NAME 加入EASY-BILL; 例子1: /join tk\n",
-				"/a AA账单; 例子1: /a tk5100,rzt | 例子2: /a tk5.1,rzt u (尾部的u代表美元)\n",
-				"/p 向某人支付; 例子1: /p tk5100,rzt | 例子2: /p tk5.1,rzt u \n",
-				"/l 账单; 例子1: /l | 例子2: /l u \n",
-				"/d 分数形式账单; 例子1: /d | 例子2: /d u\n",
+			_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, groupHelp)
+		} else if m.Chat.Type == telebot.ChatPrivate {
+			_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(
+				"-----个人的指令帮助----\n\n",
+				"/l 个人账单; 例子1: /l | 例子2: /l 2 (尾部的2代表第二页)\n",
+				"/d 分数形式个人账单; 例子1: /d 2\n",
+				"/timezone 设置个人时区; 例子1: /timezone 8 (尾部的8代表+8时区)\n",
 				"/group_name 昵称和群名对应表\n",
 				"/help 帮助\n\n",
-				"支持货币表 k: 瑞尔(默认货币); u：美元",
-			))
-		} else if m.Chat.Type == telebot.ChatPrivate {
-			bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(
-				"/l 个人账单; 例子1: /l \n",
-				"/d 分数形式个人账单; 例子1: /d \n",
-				"/timezone 设置个人时区; 例子1: /timezone 8\n",
-				"/help 帮助\n\n",
-				"支持货币表 k: 瑞尔(默认货币); u：美元",
+				groupHelp,
 			))
 		}
 	})
@@ -221,19 +225,16 @@ func main() {
 	})
 	handler.Reg(bot, "/group_name", func(m *telebot.Message) {
 		var err error
-		if m.Chat.Type != telebot.ChatGroup {
-			return
-		}
 		defer func() {
 			if err != nil {
-				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
 				var album telebot.Album
 				album, err = internal.GroupNameList(db)
 				if err != nil {
-					bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
-					bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, album)
+					_, _ = bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, album)
 				}
 			}
 		}()
@@ -247,14 +248,14 @@ func main() {
 		}
 		defer func() {
 			if err != nil {
-				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
 				var bill telebot.Album
 				bill, err = internal.WalletList(db, currencyType, false)
 				if err != nil {
-					bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
-					bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
+					_, _ = bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
 				}
 			}
 		}()
@@ -353,14 +354,14 @@ func main() {
 		}
 		defer func() {
 			if err != nil {
-				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
 				var bill telebot.Album
 				bill, err = internal.WalletList(db, currencyType, false)
 				if err != nil {
-					bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
-					bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
+					_, _ = bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
 				}
 			}
 		}()
@@ -463,14 +464,14 @@ func main() {
 			}
 			defer func() {
 				if err != nil {
-					bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+					_, _ =bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
 					var bill telebot.Album
 					bill, err = internal.WalletList(db, currencyType)
 					if err != nil {
-						bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+						_, _ =bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 					} else {
-						bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
+						_, _ =bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
 					}
 				}
 			}()
@@ -512,17 +513,17 @@ func main() {
 		}
 		defer func() {
 			if err != nil {
-				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
 				if err != nil {
-					bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
 					var bill telebot.Album
 					bill, err = internal.MenuList(db)
 					if err != nil {
-						bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+						_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 					} else {
-						bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
+						_, _ = bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
 					}
 				}
 			}
@@ -563,14 +564,14 @@ func main() {
 		}
 		defer func() {
 			if err != nil {
-				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
 				var bill telebot.Album
 				bill, err = internal.MenuList(db)
 				if err != nil {
-					bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
-					bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
+					_, _ = bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
 				}
 			}
 		}()
@@ -584,14 +585,14 @@ func main() {
 		}
 		defer func() {
 			if err != nil {
-				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
 				var bill telebot.Album
 				bill, err = internal.FoodList(db)
 				if err != nil {
-					bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
-					bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
+					_, _ = bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
 				}
 
 			}
@@ -695,14 +696,14 @@ func main() {
 		}
 		defer func() {
 			if err != nil {
-				bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
 				var bill telebot.Album
 				bill, err = internal.FoodList(db)
 				if err != nil {
-					bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
-					bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
+					_, _ = bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
 				}
 
 			}
