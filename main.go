@@ -165,7 +165,7 @@ func main() {
 			} else {
 				var bill telebot.Album
 				var currencyType int
-				currencyType, _ = internal.Parse(strings.TrimSpace(m.Payload))
+				currencyType, _, _ = internal.Parse(strings.TrimSpace(m.Payload))
 				bill, err = internal.WalletList(db, currencyType, detail)
 				if err != nil {
 					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
@@ -260,7 +260,7 @@ func main() {
 			}
 		}()
 		command := strings.ToLower(strings.TrimSpace(m.Payload))
-		currencyType, command = internal.Parse(command)
+		currencyType, command, _ = internal.Parse(command)
 		// hcx,7500,dsj
 		number := int64(0)
 		{
@@ -367,7 +367,8 @@ func main() {
 		}()
 
 		command := strings.ToLower(strings.TrimSpace(m.Payload))
-		currencyType, command = internal.Parse(command)
+		useDefaultCurrencyType := false
+		currencyType, command, useDefaultCurrencyType = internal.Parse(command)
 		//  hcx7500, hr, dsj100
 		userStr := command
 		ua := splitRegexp.Split(userStr, -1)
@@ -410,7 +411,14 @@ func main() {
 			totalAccount += a
 			name2Acount[n] = big.NewRat(a, 1)
 		}
-
+		minCurrencyTokenMustSpecify := internal.MinCurrencyTokenMustSpecify[currencyType]
+		if useDefaultCurrencyType && totalAccount < minCurrencyTokenMustSpecify {
+			err = errors.New(internal.CurrencyName[currencyType] +
+				" 总金额小于" +
+				internal.MarshalCurrencyNumber(minCurrencyTokenMustSpecify, currencyType) +
+				"，必须明确指明货币类型")
+			return
+		}
 		_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {
 			err = internal.UpdateGroupName(s, m)
 			if err != nil {
@@ -530,7 +538,7 @@ func main() {
 		}()
 		command := strings.TrimSpace(m.Payload)
 		var menuStr string
-		currencyType, menuStr = internal.Parse(command)
+		currencyType, menuStr, _ = internal.Parse(command)
 		me := splitRegexp.Split(menuStr, -1)
 
 		_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {

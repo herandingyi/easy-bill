@@ -5,26 +5,10 @@ import (
 	"easy-bill/internal/models"
 	"encoding/json"
 	"errors"
-	"strings"
 	"time"
 
 	"xorm.io/xorm"
 )
-
-func Parse(name string) (currencyType int, remain string) {
-	name = " " + strings.TrimSpace(name)
-	tokens := []string{" u", " U", " usd", " USD", " 刀", " $", " 美元", " 美金"}
-	var token string
-	currencyType = 2
-	for _, v := range tokens {
-		if strings.HasSuffix(name, v) {
-			currencyType = 1
-			token = v
-		}
-	}
-	remain = strings.TrimSuffix(name, token)
-	return
-}
 
 func InsertCommand(s *xorm.Session, c *models.Command) (id int64, err error) {
 	type MyUser struct {

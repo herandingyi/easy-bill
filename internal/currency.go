@@ -27,6 +27,45 @@ var CurrencyToken = []string{"",
 	"$",
 	"៛",
 }
+var CurrencyTokens = [][]string{{},
+	{"u", "U", "usd", "USD", "刀", "$", "美元", "美金"},
+	{"k", "K", "khr", "KHR", "៛"},
+}
+var MinCurrencyTokenMustSpecify = []int64{0,
+	100, // 小于 1.00 USD 时必须指定货币类型
+	100, // 小于 100  KHR 时必须指定货币类型
+}
+
+func Parse(name string) (currencyType int, remain string, useDefaultCurrencyType bool) {
+	name = " " + strings.TrimSpace(name)
+	var tokens []string
+	var token string
+	useDefaultCurrencyType = true
+	defaultCurrencyType := 2
+	for currencyType, tokens = range CurrencyTokens {
+		if currencyType == 0 {
+			continue
+		}
+		for _, v := range tokens {
+			v = " " + v
+			if strings.HasSuffix(name, v) {
+				useDefaultCurrencyType = false
+				token = v
+				break
+			}
+		}
+		if token != "" {
+			break
+		}
+	}
+	if token == "" {
+		currencyType = defaultCurrencyType
+		remain = name
+	} else {
+		remain = strings.TrimSuffix(name, token)
+	}
+	return
+}
 
 func MarshalCurrencyNumber(i int64, currencyType int) (num string) {
 	decimalPlace := CurrencyDecimalPlace[currencyType]
