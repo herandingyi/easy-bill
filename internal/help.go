@@ -85,11 +85,19 @@ func Help(country string) string {
 	}
 	supportToken := currentLang["SupportCurrencyTable"]
 	{
+		tokenArray := make([]string, 0, len(CurrencyTokens)-1)
+		tokenMap := map[string]int{}
 		for i, token := range CurrencyTokens {
 			if i == 0 {
 				continue
 			}
-			supportToken += fmt.Sprint(token[0], ": ", CurrencyName[i])
+			tokenArray = append(tokenArray, token[0])
+			tokenMap[token[0]] = i
+		}
+		sort.Strings(tokenArray)
+		for _, token := range tokenArray {
+			i := tokenMap[token]
+			supportToken += fmt.Sprint(token, ": ", CurrencyName[i])
 			if i == DefaultCurrencyType {
 				supportToken += "(" + currentLang["DefaultCurrency"] + "); \n"
 			} else {
