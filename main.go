@@ -413,13 +413,15 @@ func main() {
 			totalAccount += a
 			name2Acount[n] = big.NewRat(a, 1)
 		}
-		minCurrencyTokenMustSpecify := internal.MinCurrencyTokenMustSpecify[currencyType]
-		if useDefaultCurrencyType && totalAccount < minCurrencyTokenMustSpecify {
-			err = errors.New(internal.CurrencyName[currencyType] +
-				" 总金额小于" +
-				internal.MarshalCurrencyNumber(minCurrencyTokenMustSpecify, currencyType) +
-				"，必须明确指明货币类型")
-			return
+		if useDefaultCurrencyType {
+			minCurrencyTokenMustSpecify := internal.MinCurrencyTokenMustSpecify[currencyType]
+			if totalAccount < minCurrencyTokenMustSpecify {
+				err = errors.New(internal.CurrencyName[currencyType] +
+					" 总金额小于" +
+					internal.MarshalCurrencyNumber(minCurrencyTokenMustSpecify, currencyType) +
+					"，必须明确指明货币类型")
+				return
+			}
 		}
 		_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {
 			err = internal.UpdateGroupName(s, m)
