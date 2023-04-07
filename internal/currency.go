@@ -35,6 +35,7 @@ var CurrencyTokens = [][]string{{},
 var MinCurrencyTokenMustSpecify = []int64{0,
 	100, // 小于 1.00 USD 时必须指定货币类型
 	100, // 小于 100  KHR 时必须指定货币类型
+	100, // 小于 1.00 CNY 时必须指定货币类型
 }
 
 var DefaultCurrencyType = 2
