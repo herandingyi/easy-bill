@@ -11,32 +11,33 @@ import (
 var CurrencyReg = []*regexp.Regexp{nil,
 	regexp.MustCompile(`^[0-9]+\.?[0-9]{0,2}$`),
 	regexp.MustCompile(`^[0-9]+$`),
+	regexp.MustCompile(`^[0-9]+\.?[0-9]{0,2}$`),
 }
 
 var CurrencyDecimalPlace = []int{0,
 	2,
 	0,
+	2,
 }
 
 var CurrencyName = []string{"",
 	"USD",
 	"KHR",
+	"CNY",
 }
 
-var CurrencyToken = []string{"",
-	"$",
-	"៛",
-}
 var CurrencyTokens = [][]string{{},
 	{"u", "U", "usd", "USD", "刀", "$", "美元", "美金"},
-	{"k", "K", "khr", "KHR", "៛"},
+	{"k", "K", "khr", "KHR", "៛", "瑞尔"},
+	{"c", "C", "cny", "CNY", "¥", "人民币", "元"},
 }
+
 var MinCurrencyTokenMustSpecify = []int64{0,
 	100, // 小于 1.00 USD 时必须指定货币类型
 	100, // 小于 100  KHR 时必须指定货币类型
 }
 
-const defaultCurrencyType = 2
+var DefaultCurrencyType = 2
 
 func Parse(name string) (currencyType int, remain string, useDefaultCurrencyType bool) {
 	name = " " + strings.TrimSpace(name)
@@ -60,7 +61,7 @@ func Parse(name string) (currencyType int, remain string, useDefaultCurrencyType
 		}
 	}
 	if token == "" {
-		currencyType = defaultCurrencyType
+		currencyType = DefaultCurrencyType
 		remain = name
 	} else {
 		remain = strings.TrimSuffix(name, token)

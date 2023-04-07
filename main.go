@@ -177,30 +177,8 @@ func main() {
 	}
 
 	handler.Reg(bot, "/help", func(m *telebot.Message) {
-		groupHelp := fmt.Sprint(
-			"-----群中的指令帮助----\n\n",
-			"/join NAME 加入EASY-BILL; 例子1: /join tk\n",
-			"/a AA账单; 例子1: /a tk5100,rzt | 例子2: /a tk5.1,rzt u (尾部的u代表美元)\n",
-			"/p 向某人支付; 例子1: /p tk5100,rzt | 例子2: /p tk5.1,rzt u \n",
-			"/l 账单; 例子1: /l | 例子2: /l u \n",
-			"/d 分数形式账单; 例子1: /d | 例子2: /d u\n",
-			"/group_name 昵称和群名对应表\n",
-			"/help 帮助\n\n",
-			"支持货币表 k: 瑞尔(默认货币); u：美元",
-		)
-		if m.Chat.Type == telebot.ChatGroup {
-			_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, groupHelp)
-		} else if m.Chat.Type == telebot.ChatPrivate {
-			_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(
-				"-----个人的指令帮助----\n\n",
-				"/l 个人账单; 例子1: /l | 例子2: /l 2 (尾部的2代表第二页)\n",
-				"/d 分数形式个人账单; 例子1: /d 2\n",
-				"/timezone 设置个人时区; 例子1: /timezone 8 (尾部的8代表+8时区)\n",
-				"/group_name 昵称和群名对应表\n",
-				"/help 帮助\n\n",
-				groupHelp,
-			))
-		}
+		lang := strings.TrimSpace(m.Payload)
+		_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, internal.Help(lang))
 	})
 	handler.Reg(bot, "/l", func(m *telebot.Message) {
 		if m.Chat.Type == telebot.ChatGroup {
