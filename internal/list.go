@@ -130,12 +130,32 @@ func PrivateList(db *xorm.Engine, userId int64, detail bool, page int) (a telebo
 			return
 		}
 	}
+	type Wallet struct {
+		Type              int
+		BeforeNumerator   int64
+		BeforeDenominator int64
+		Inc               float64
+		AfterNumerator    int64
+		AfterDenominator  int64
+		Command           string
+		CreateTime        time.Time
+	}
 	limit := 50
 	offset := (page - 1) * limit
-	logs := make([]*models.WalletLog, 0)
+	logs := make([]*Wallet, 0)
 	err = db.SQL(""+
 		"select"+
-		" * from wallet_log"+
+		" wallet_log.id"+
+		",wallet_log.type"+
+		",wallet_log.before_numerator"+
+		",wallet_log.before_denominator"+
+		",wallet_log.inc"+
+		",wallet_log.after_numerator"+
+		",wallet_log.after_denominator"+
+		",command.command"+
+		",wallet_log.create_time"+
+		" from wallet_log"+
+		" left join command on command.id=wallet_log.command_id"+
 		" where user_id=?"+
 		" order by create_time desc"+
 		" limit ? offset ?", userId, limit, offset).Find(&logs)
@@ -197,7 +217,8 @@ func PrivateList(db *xorm.Engine, userId int64, detail bool, page int) (a telebo
 		body = append(body, []string{log.CreateTime.Format("06-01-02 15:04:05") + " " + CurrencyName[log.Type],
 			beforeStr,
 			incStr,
-			afterStr})
+			afterStr,
+			log.Command})
 	}
-	return album.ToAlbum([]string{pageTitle + " DATE", "BEFORE", "INC", "AFTER"}, body)
+	return album.ToAlbum([]string{pageTitle + " DATE", "BEFORE", "INC", "AFTER", "COMMAND"}, body)
 }
