@@ -328,8 +328,10 @@ func main() {
 			}
 			var commandId int64
 			commandId, err = internal.InsertCommand(s, &models.Command{
-				SenderId: int64(m.Sender.ID),
-				Command:  m.Text})
+				SenderId:   int64(m.Sender.ID),
+				Command:    m.Text,
+				CreateTime: m.Time(),
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -444,8 +446,10 @@ func main() {
 			}
 			var commandId int64
 			commandId, err = internal.InsertCommand(s, &models.Command{
-				SenderId: int64(m.Sender.ID),
-				Command:  m.Text})
+				SenderId:   int64(m.Sender.ID),
+				Command:    m.Text,
+				CreateTime: m.Time(),
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -678,8 +682,10 @@ func main() {
 			}
 			var commandId int64
 			commandId, err = internal.InsertCommand(s, &models.Command{
-				SenderId: int64(m.Sender.ID),
-				Command:  m.Text})
+				SenderId:   int64(m.Sender.ID),
+				Command:    m.Text,
+				CreateTime: m.Time(),
+			})
 			if err != nil {
 				return nil, err
 			}

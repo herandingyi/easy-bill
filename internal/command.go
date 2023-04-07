@@ -5,8 +5,6 @@ import (
 	"easy-bill/internal/models"
 	"encoding/json"
 	"errors"
-	"time"
-
 	"xorm.io/xorm"
 )
 
@@ -35,11 +33,12 @@ func InsertCommand(s *xorm.Session, c *models.Command) (id int64, err error) {
 		return 0, err
 	}
 	var ret sql.Result
-	ret, err = s.Exec("insert into command"+
+	ret, err = s.Exec("insert into"+
+		" command"+
 		"(sender_id"+
 		",command"+
 		",args"+
-		",create_time) values (?, ?, ?, ?)", c.SenderId, c.Command, body, time.Now())
+		",create_time) values (?, ?, ?, ?)", c.SenderId, c.Command, body, c.CreateTime)
 	if err != nil {
 		return 0, err
 	}
