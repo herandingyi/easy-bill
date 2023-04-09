@@ -6,4 +6,5 @@ type User struct {
 	Status    int
 	Timezone  int
 	GroupName string
+	Language  string
 }

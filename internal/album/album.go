@@ -55,7 +55,9 @@ func ToImage(text, filename string) (err error) {
 	width := 0
 	{
 		headerLen := 0
-		if len(texts) > 0 {
+		if len(texts) > 1 {
+			headerLen = len(texts[1])
+		} else if len(texts) > 0 {
 			headerLen = len(texts[0])
 		}
 		width = 10*2 + 7*headerLen

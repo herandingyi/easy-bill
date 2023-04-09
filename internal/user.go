@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"easy-bill/internal/models"
+	"fmt"
 	"github.com/tucnak/telebot"
 	"strings"
 	"xorm.io/xorm"
@@ -17,4 +19,25 @@ func UpdateGroupName(s *xorm.Session, m *telebot.Message) (err error) {
 		return err
 	}
 	return nil
+}
+
+func GetUserInfo(db *xorm.Engine, userId int64) (timezone int, language string, err error) {
+
+	timezone = 8
+	language = DefaultLanguage
+	{
+		user := &models.User{}
+		ok := false
+		ok, err = db.SQL("select timezone,language from user where id=?", userId).Get(user)
+		if err != nil {
+			return
+		}
+		if !ok {
+			err = fmt.Errorf("user not found")
+			return
+		}
+		timezone = user.Timezone
+		language = user.Language
+	}
+	return
 }

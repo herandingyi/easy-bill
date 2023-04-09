@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -66,6 +67,23 @@ func Parse(name string) (currencyType int, remain string, useDefaultCurrencyType
 		remain = name
 	} else {
 		remain = strings.TrimSuffix(name, token)
+	}
+	return
+}
+
+func GetSortCurrency() (tokens []int) {
+	tokenArray := make([]string, 0, len(CurrencyTokens)-1)
+	tokenMap := map[string]int{}
+	for i, token := range CurrencyTokens {
+		if i == 0 {
+			continue
+		}
+		tokenArray = append(tokenArray, token[0])
+		tokenMap[token[0]] = i
+	}
+	sort.Strings(tokenArray)
+	for _, token := range tokenArray {
+		tokens = append(tokens, tokenMap[token])
 	}
 	return
 }

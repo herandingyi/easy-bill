@@ -16,7 +16,8 @@ CREATE TABLE `command`
     `create_time` datetime                                                     NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '账单记录生成时间',
     `args`        text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci        NOT NULL,
     `status`      varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '1' COMMENT '‘1’: 有效；‘2’:无效',
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    KEY `idx_create_time` (`create_time`) USING BTREE
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 35
   DEFAULT CHARSET = utf8mb4
@@ -51,7 +52,8 @@ CREATE TABLE `user`
     `name`       varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户名称',
     `status`     varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci  NOT NULL DEFAULT '1' COMMENT '用户状态 ‘1’:正常；’2’:不可用',
     `timezone`   int                                                           NOT NULL DEFAULT '0' COMMENT '时区',
-    `group_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci          DEFAULT NULL COMMENT '群名',
+    `group_name` varchar(255) COLLATE utf8mb4_general_ci                       NOT NULL DEFAULT '' COMMENT '群名',
+    `language`   varchar(8) COLLATE utf8mb4_general_ci                         NOT NULL DEFAULT 'zh' COMMENT '语言',
     PRIMARY KEY (`id`),
     UNIQUE KEY `name` (`name`)
 ) ENGINE = InnoDB

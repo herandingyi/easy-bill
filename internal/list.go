@@ -13,6 +13,135 @@ import (
 	"xorm.io/xorm"
 )
 
+func PrivateReportList(db *xorm.Engine, senderId int64, detail bool) (a telebot.Album, err error) {
+	timezone := 8
+	timezone, _, err = GetUserInfo(db, senderId)
+	if err != nil {
+		return
+	}
+	//ALTER TABLE `command`
+	//ADD INDEX `idx_create_time`(`create_time`) USING BTREE;
+	//ALTER TABLE `user`
+	//ADD COLUMN `language` varchar(8) NOT NULL DEFAULT 'zh' COMMENT '语言' AFTER `group_name`;
+	//当日 00:00:00
+	now := time.Now().UTC()
+	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	//本月1号 00:00:00
+	thisMonth := now.AddDate(0, 0, -now.Day()+1)
+	//上个月1号
+	lastMonth := now.AddDate(0, -1, -now.Day()+1)
+	cmds := make([]*models.Command, 0, 600)
+	err = db.SQL("SELECT "+
+		" command.command,"+
+		" command.args,"+
+		" command.create_time"+
+		" FROM command FORCE INDEX (idx_create_time)"+
+		" where create_time > ?", lastMonth).Find(&cmds)
+	if err != nil {
+		return
+	}
+	for _, cmd := range cmds {
+		cmd.CreateTime = FixTime(cmd.CreateTime, timezone)
+	}
+	initBill := func() (bill []*big.Rat) {
+		bill = make([]*big.Rat, len(CurrencyName))
+		for i := range bill {
+			bill[i] = big.NewRat(0, 1)
+		}
+		return
+	}
+	addBill := func(bill []*big.Rat, aaCmd *AaCmd, name string, createTime, start, end time.Time) {
+		if createTime.After(start) && createTime.Before(end) {
+			spendBill := aaCmd.Name2UseMoney[name]
+			if spendBill == nil {
+				return
+			}
+			for _, cmdName := range aaCmd.Names {
+				if name == cmdName {
+					bill[aaCmd.CurrencyType] = big.NewRat(0, 1).Add(bill[aaCmd.CurrencyType], spendBill)
+				}
+			}
+		}
+	}
+	todayBill := initBill()
+	yesterdayBill := initBill()
+	sevenDayBill := initBill()
+	thisMonthBill := initBill()
+	lastMonthBill := initBill()
+	for _, cmd := range cmds {
+		if strings.HasPrefix(cmd.Command, "/p") {
+			continue
+		}
+		var id2Name map[int64]string
+		_, id2Name, err = GetUserMap(cmd.Args)
+		name := id2Name[senderId]
+		if name == "" {
+			continue
+		}
+		var aaCmd *AaCmd
+		aaCmd, err = ToAaCmd(cmd.Command)
+		//今日开销
+		addBill(todayBill, aaCmd, name, cmd.CreateTime, now, now.Add(time.Hour*24))
+		//昨日开销
+		addBill(yesterdayBill, aaCmd, name, cmd.CreateTime, now.AddDate(0, 0, -1), now)
+		//近七日开销
+		//addBill(sevenDayBill, aaCmd, name, cmd.CreateTime, now.AddDate(0, 0, -6), now.Add(time.Hour*24))
+		//本月开销
+		addBill(thisMonthBill, aaCmd, name, cmd.CreateTime, thisMonth, now.Add(time.Hour*24))
+		//上月开销
+		addBill(lastMonthBill, aaCmd, name, cmd.CreateTime, lastMonth, thisMonth)
+	}
+	header := []string{"货币", "今日", "昨日", "本月日均", "上月日均", "本月开销", "上月开销"}
+	body := make([][]string, 0, 5)
+	currency := GetSortCurrency()
+	//获取上个月总天数
+	lastMonthDay := int(math.Ceil(float64(thisMonth.Sub(lastMonth).Hours()) / 24))
+	currMonthDay := int(math.Ceil(float64(now.Add(24*time.Hour).Sub(thisMonth).Hours()) / 24))
+	for _, i := range currency {
+		if todayBill[i].Denom().Int64() == 1 && todayBill[i].Num().Int64() == 0 &&
+			yesterdayBill[i].Denom().Int64() == 1 && yesterdayBill[i].Num().Int64() == 0 &&
+			sevenDayBill[i].Denom().Int64() == 1 && sevenDayBill[i].Num().Int64() == 0 &&
+			thisMonthBill[i].Denom().Int64() == 1 && thisMonthBill[i].Num().Int64() == 0 &&
+			lastMonthBill[i].Denom().Int64() == 1 && lastMonthBill[i].Num().Int64() == 0 {
+			continue
+		}
+		row := make([]string, 0, 5)
+		row = append(row, CurrencyName[i])
+		row = append(row, BillToString(todayBill[i], i, detail))
+		row = append(row, BillToString(yesterdayBill[i], i, detail))
+		row = append(row, BillToString(big.NewRat(1, 1).Mul(thisMonthBill[i], big.NewRat(1, int64(currMonthDay))), i, detail))
+		row = append(row, BillToString(big.NewRat(1, 1).Mul(lastMonthBill[i], big.NewRat(1, int64(lastMonthDay))), i, detail))
+		row = append(row, BillToString(thisMonthBill[i], i, detail))
+		row = append(row, BillToString(lastMonthBill[i], i, detail))
+		body = append(body, row)
+	}
+
+	return album.ToAlbum(header, body)
+	/*
+
+		toDesc := func(bill []*big.Rat) string {
+			ret := ""
+			for _, i := range currency {
+				if bill[i].Num().Int64() == 0 {
+					continue
+				}
+				if ret == "" {
+					ret += fmt.Sprintf("%s(%s)", BillToString(bill[i], i, detail), CurrencyName[i])
+				} else {
+					ret += fmt.Sprintf("    ,    %s(%s)", BillToString(bill[i], i, detail), CurrencyName[i])
+				}
+			}
+			return ret
+		}
+		desc = ""
+		desc += I18n[language]["Today"] + ":" + toDesc(todayBill) + "\n"
+		desc += I18n[language]["Yesterday"] + ":" + toDesc(yesterdayBill) + "\n"
+		desc += I18n[language]["LastSevenDay"] + ":" + toDesc(sevenDayBill) + "\n"
+		desc += I18n[language]["ThisMonth"] + ":" + toDesc(thisMonthBill) + "\n"
+		desc += I18n[language]["LastMonth"] + ":" + toDesc(lastMonthBill) + "\n"
+	*/
+}
+
 func GroupNameList(db *xorm.Engine) (a telebot.Album, err error) {
 	users := make([]*models.User, 0, 5)
 	err = db.SQL("SELECT " +
@@ -117,19 +246,20 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool) (telebot.Album, 
 	return album.ToAlbum([]string{"NAME", "MONEY-" + CurrencyName[currencyType]}, body)
 }
 
+func BillToString(bill *big.Rat, currencyType int, detail bool) string {
+	f, _ := bill.Float64()
+	beforeStr := MarshalCurrencyNumber(int64(f), currencyType)
+	if bill.Denom().Cmp(big.NewInt(1)) == 0 {
+		beforeStr = MarshalCurrencyNumber(bill.Num().Int64(), currencyType)
+	} else if detail {
+		beforeStr = MarshalCurrencyNumber(bill.Num().Int64(), currencyType) + "/" + bill.Denom().String()
+	}
+	return beforeStr
+}
+
 func PrivateList(db *xorm.Engine, userId int64, detail bool, page int) (a telebot.Album, err error) {
 	timezone := 8
-	{
-		ok := false
-		ok, err = db.SQL("select timezone from user where id=?", userId).Get(&timezone)
-		if err != nil {
-			return
-		}
-		if !ok {
-			err = fmt.Errorf("user not found")
-			return
-		}
-	}
+	timezone, _, _ = GetUserInfo(db, userId)
 	type Wallet struct {
 		Type              int
 		BeforeNumerator   int64
@@ -208,12 +338,7 @@ func PrivateList(db *xorm.Engine, userId int64, detail bool, page int) (a telebo
 		} else if detail {
 			incStr = MarshalCurrencyNumber(inc.Num().Int64(), log.Type) + "/" + inc.Denom().String()
 		}
-		// 如果日志时间小于于2023年3月25号的话，需要固定减去7小时
-		if log.CreateTime.Before(time.Date(2023, 3, 25, 0, 0, 0, 0, time.UTC)) {
-			log.CreateTime = log.CreateTime.Add(time.Hour * time.Duration(-7))
-		}
-		// 根据用户设定的时区，进行时间转换
-		log.CreateTime = log.CreateTime.Add(time.Duration(timezone) * time.Hour)
+		log.CreateTime = FixTime(log.CreateTime, timezone)
 		body = append(body, []string{log.CreateTime.Format("06-01-02 15:04:05") + " " + CurrencyName[log.Type],
 			beforeStr,
 			incStr,

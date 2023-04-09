@@ -34,7 +34,6 @@ func init() {
 
 var nameRegexp = regexp.MustCompile(`[a-z]+`)
 var numberRegexp = regexp.MustCompile(`[0-9]+\.?[0-9]*`)
-var splitRegexp = regexp.MustCompile(`[,，。:;>]`)
 
 func main() {
 	token := os.Getenv("EASY_BILL_TG_TOKEN")
@@ -122,6 +121,28 @@ func main() {
 			_, err = db.Exec("update user set timezone=? where id=?", timezone, m.Sender.ID)
 		}
 	})
+	// 设置语言
+	handler.Reg(bot, "/language", func(m *telebot.Message) {
+		var err error
+		defer func() {
+			if err != nil {
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+			} else {
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, "语言设置成功,语言为 "+m.Payload)
+			}
+		}()
+		if m.Chat.Type == telebot.ChatPrivate {
+			if m.Payload == "" {
+				err = errors.New("请输入语言 如 /language en")
+				return
+			}
+			if internal.I18n[m.Payload] == nil {
+				err = errors.New("请检查语言代码是否正确 如 /language en, 请查阅 /help 浏览支持的语言")
+				return
+			}
+			_, err = db.Exec("update user set language=? where id=?", m.Payload, m.Sender.ID)
+		}
+	})
 	//账单
 	privateListFunc := func(m *telebot.Message, detail bool) {
 		var err error
@@ -148,6 +169,25 @@ func main() {
 				return
 			}
 		}
+	}
+	privateReportList := func(m *telebot.Message, detail bool) {
+		var err error
+		if m.Chat.Type != telebot.ChatPrivate {
+			return
+		}
+		defer func() {
+			if err != nil {
+				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+			} else {
+				var bill telebot.Album
+				bill, err = internal.PrivateReportList(db, int64(m.Sender.ID), detail)
+				if err != nil {
+					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
+				} else {
+					_, _ = bot.SendAlbum(&ChatId{fmt.Sprint(m.Chat.ID)}, bill)
+				}
+			}
+		}()
 	}
 	//账单明细 从最近一次结清开始显示
 	handler.Reg(bot, "/list", func(m *telebot.Message) { privateListFunc(m, false) })
@@ -199,6 +239,16 @@ func main() {
 			listFunc(m, true)
 		} else if m.Chat.Type == telebot.ChatPrivate {
 			privateListFunc(m, true)
+		}
+	})
+	handler.Reg(bot, "/lr", func(m *telebot.Message) {
+		if m.Chat.Type == telebot.ChatPrivate {
+			privateReportList(m, false)
+		}
+	})
+	handler.Reg(bot, "/dr", func(m *telebot.Message) {
+		if m.Chat.Type == telebot.ChatPrivate {
+			privateReportList(m, true)
 		}
 	})
 	handler.Reg(bot, "/group_name", func(m *telebot.Message) {
@@ -348,48 +398,16 @@ func main() {
 
 		command := strings.ToLower(strings.TrimSpace(m.Payload))
 		useDefaultCurrencyType := false
-		currencyType, command, useDefaultCurrencyType = internal.Parse(command)
-		//  hcx7500, hr, dsj100
-		userStr := command
-		ua := splitRegexp.Split(userStr, -1)
-		name2Acount := make(map[string]*big.Rat)
-		names := make([]string, 0, 5)
 		totalAccount := int64(0)
-		for _, v := range ua {
-			v = strings.TrimSpace(v)
-			if v == "" {
-				continue
+		var cmd *internal.AaCmd
+		cmd, err = internal.ToAaCmd(command)
+		{
+			if err != nil {
+				return
 			}
-			//v  :  hcx7500
-			ns := nameRegexp.FindAllString(v, -1)
-			n := ""
-			for _, name := range ns {
-				name = strings.TrimSpace(name)
-				if name == "" {
-					continue
-				}
-				n = name
-				break
-			}
-			if n == "" {
-				continue
-			}
-			names = append(names, n)
-			as := nameRegexp.Split(v, -1)
-			a := int64(0)
-			for _, account := range as {
-				account = strings.TrimSpace(account)
-				if account == "" {
-					continue
-				}
-				a, err = internal.UnmarshalCurrencyNumber(account, currencyType)
-				if err != nil {
-					return
-				}
-				break
-			}
-			totalAccount += a
-			name2Acount[n] = big.NewRat(a, 1)
+			currencyType = cmd.CurrencyType
+			useDefaultCurrencyType = cmd.UseDefaultCurrencyType
+			totalAccount = cmd.TotalMoney
 		}
 		if useDefaultCurrencyType {
 			minCurrencyTokenMustSpecify := internal.MinCurrencyTokenMustSpecify[currencyType]
@@ -406,10 +424,8 @@ func main() {
 			if err != nil {
 				return
 			}
-			userCount := int64(len(names))
-			userIds := make([]int64, 0, userCount)
-			userId2Acount := make(map[int64]*big.Rat)
-			for _, name := range names {
+			userId2Inc := make(map[int64]*big.Rat)
+			for name, useMoney := range cmd.Name2UseMoney {
 				var userId int64
 				var exist bool
 				exist, err = s.SQL("select id from user where name =? and status=1", name).Get(&userId)
@@ -421,8 +437,7 @@ func main() {
 						")有误, 请核对后重新输入;\n或是让你伙伴(" + name +
 						")输入 /join 加入")
 				}
-				userIds = append(userIds, userId)
-				userId2Acount[userId] = name2Acount[name]
+				userId2Inc[userId] = big.NewRat(0, 1).Sub(cmd.Name2PutMoney[name], useMoney)
 			}
 			var commandId int64
 			commandId, err = internal.InsertCommand(s, &models.Command{
@@ -433,11 +448,8 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-
-			for _, userId := range userIds {
-				account := userId2Acount[userId]
-				gainAccount := new(big.Rat).Sub(account, big.NewRat(totalAccount, userCount))
-				err = internal.WalletInc(s, userId, currencyType, gainAccount.Num().Int64(), gainAccount.Denom().Int64(), commandId, m.Time())
+			for userId, inc := range userId2Inc {
+				err = internal.WalletInc(s, userId, currencyType, inc.Num().Int64(), inc.Denom().Int64(), commandId, m.Time())
 				if err != nil {
 					return nil, err
 				}
@@ -523,7 +535,7 @@ func main() {
 		command := strings.TrimSpace(m.Payload)
 		var menuStr string
 		currencyType, menuStr, _ = internal.Parse(command)
-		me := splitRegexp.Split(menuStr, -1)
+		me := internal.SplitRegexp.Split(menuStr, -1)
 
 		_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {
 			if len(me) != 4 {

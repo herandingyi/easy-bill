@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-var i18n = map[string]map[string]string{
+var I18n = map[string]map[string]string{
 	"zh": {
 		"zh":              "中文",
 		"en":              "英文",
@@ -13,8 +13,10 @@ var i18n = map[string]map[string]string{
 		"DefaultLanguage": "默认语言",
 		"DefaultCurrency": "默认货币",
 		"HelpDetail": "-----个人的指令帮助----\n\n" +
-			"/l 个人账单; 例子1: /l | 例子2: /l 2 (尾部的2代表第二页)\n" +
-			"/d 分数形式个人账单; 例子1: /d 2\n" +
+			"/l 个人账单明细; 例子1: /l | 例子2: /l 2 (尾部的2代表第二页)\n" +
+			"/d 分数形式个人账单明细; 例子1: /d 2\n" +
+			"/lr 个人账单报告; 例子1: /lr\n" +
+			"/dr 分数形式个人账单报告; 例子1: /dr\n" +
 			"/timezone 设置个人时区; 例子1: /timezone 8 (尾部的8代表+8时区)\n" +
 			"/group_name 昵称和群名对应表\n" +
 			"/help 帮助; 例子1:/help | 例子2: /help en (尾部的en代表查看英文帮助文档)\n\n" +
@@ -36,8 +38,10 @@ var i18n = map[string]map[string]string{
 		"DefaultLanguage": "Default Language",
 		"DefaultCurrency": "Default Currency",
 		"HelpDetail": "-----Personal command help----\n\n" +
-			"/l Personal bill; Example 1: /l | Example 2: /l 2 (the 2 at the end represents the second page)\n" +
-			"/d Fractional personal bill; Example 1: /d 2\n" +
+			"/l Personal bill details; Example 1: /l | Example 2: /l 2 (the 2 at the end represents the second page)\n" +
+			"/d Fractional personal bill details; Example 1: /d 2\n" +
+			"/lr Personal bill report; Example 1: /lr\n" +
+			"/dr Fractional personal bill report; Example 1: /dr\n" +
 			"/timezone Set personal time zone; Example 1: /timezone 8 (the 8 at the end represents +8 time zone)\n" +
 			"/group_name Nickname and group name correspondence table\n" +
 			"/help Help; Example 1:/help | Example 2: /help en (the en at the end represents English help document)\n\n" +
@@ -59,8 +63,10 @@ var i18n = map[string]map[string]string{
 		"DefaultLanguage": "Язык по умолчанию",
 		"DefaultCurrency": "Валюта по умолчанию",
 		"HelpDetail": "-----Персональная команда помощи----\n\n" +
-			"/l Персональный счет; Пример 1: /l | Пример 2: /l 2 (2 в конце означает вторую страницу)\n" +
-			"/d Дробный персональный счет; Пример 1: /d 2\n" +
+			"/l Персональная таблица счетов; Пример 1: /l | Пример 2: /l 2 (2 в конце означает вторую страницу)\n" +
+			"/d Дробная персональная таблица счетов; Пример 1: /d 2\n" +
+			"/lr Персональный отчет о счетах; Пример 1: /lr\n" +
+			"/dr Дробный персональный отчет о счетах; Пример 1: /dr\n" +
 			"/timezone Установить персональную временную зону; Пример 1: /timezone 8 (8 в конце означает +8 временную зону)\n" +
 			"/group_name Таблица соответствия никнеймов и названий групп\n" +
 			"/help Помощь; Пример 1:/help | Пример 2: /help en (en в конце означает английский документ помощи)\n\n" +
@@ -79,9 +85,9 @@ var i18n = map[string]map[string]string{
 var DefaultLanguage = "zh"
 
 func Help(country string) string {
-	currentLang := i18n[country]
+	currentLang := I18n[country]
 	if currentLang == nil {
-		currentLang = i18n[DefaultLanguage]
+		currentLang = I18n[DefaultLanguage]
 	}
 	supportToken := currentLang["SupportCurrencyTable"]
 	{
@@ -108,7 +114,7 @@ func Help(country string) string {
 	supportLanguage := currentLang["SupportLanguageTable"]
 	{
 		var languages []string
-		for lang := range i18n {
+		for lang := range I18n {
 			languages = append(languages, lang)
 		}
 		sort.Strings(languages)
