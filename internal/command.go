@@ -11,6 +11,8 @@ import (
 	"xorm.io/xorm"
 )
 
+var SplitRegexp = regexp.MustCompile(`[,，。:;>]`)
+
 func FixTime(t time.Time, timezone int) time.Time {
 	t = t.UTC()
 	// 如果日志时间小于于2023年3月25号的话，需要固定减去7小时
@@ -58,8 +60,6 @@ func InsertCommand(s *xorm.Session, c *models.Command) (id int64, err error) {
 	}
 	return ret.LastInsertId()
 }
-
-var SplitRegexp = regexp.MustCompile(`[,，。:;>]`)
 
 type AaCmd struct {
 	CurrencyType           int

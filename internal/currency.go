@@ -3,6 +3,7 @@ package internal
 import (
 	"errors"
 	"math"
+	"math/big"
 	"regexp"
 	"sort"
 	"strconv"
@@ -41,6 +42,20 @@ var MinCurrencyTokenMustSpecify = []int64{0,
 
 var DefaultCurrencyType = 2
 
+func CheckMin(useDefaultCurrencyType bool, money *big.Rat, currencyType int) (err error) {
+	if useDefaultCurrencyType {
+		minCurrencyTokenMustSpecify := MinCurrencyTokenMustSpecify[currencyType]
+		f, _ := money.Float64()
+		if int64(f) < minCurrencyTokenMustSpecify {
+			err = errors.New(CurrencyName[currencyType] +
+				" 总金额小于" +
+				MarshalCurrencyNumber(minCurrencyTokenMustSpecify, currencyType) +
+				"，必须明确指明货币类型")
+			return
+		}
+	}
+	return
+}
 func Parse(name string) (currencyType int, remain string, useDefaultCurrencyType bool) {
 	name = " " + strings.TrimSpace(name)
 	var tokens []string

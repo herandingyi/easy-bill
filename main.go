@@ -34,6 +34,7 @@ func init() {
 
 var nameRegexp = regexp.MustCompile(`[a-z]+`)
 var numberRegexp = regexp.MustCompile(`[0-9]+\.?[0-9]*`)
+var fractionRegexp = regexp.MustCompile(`([0-9]+)/([0-9]+)`)
 
 func main() {
 	token := os.Getenv("EASY_BILL_TG_TOKEN")
@@ -288,25 +289,66 @@ func main() {
 			}
 		}()
 		command := strings.ToLower(strings.TrimSpace(m.Payload))
-		currencyType, command, _ = internal.Parse(command)
-		// hcx,7500,dsj
-		number := int64(0)
+		useDefaultCurrencyType := false
+		currencyType, command, useDefaultCurrencyType = internal.Parse(command)
+		if useDefaultCurrencyType {
+			err = errors.New("使用支付指令时，必须指定货币类型")
+			return
+		}
+		number := big.NewRat(0, 1)
 		{
-			ns := numberRegexp.FindAllString(command, -1)
-			for _, n := range ns {
-				n = strings.TrimSpace(n)
-				if n == "" {
-					continue
+			// hcx,7000/3,dsj
+			{
+				a := int64(0)
+				b := int64(0)
+				ns := fractionRegexp.FindAllString(command, -1)
+				for _, n := range ns {
+					n = strings.TrimSpace(n)
+					if n == "" {
+						continue
+					}
+					ab := strings.Split(n, "/")
+					if len(ab) != 2 {
+						continue
+					}
+					a, err = strconv.ParseInt(ab[0], 10, 64)
+					if err != nil {
+						return
+					}
+					b, err = strconv.ParseInt(ab[1], 10, 64)
+					if err != nil {
+						return
+					}
 				}
-				number, err = internal.UnmarshalCurrencyNumber(n, currencyType)
-				if err != nil {
+				if a != 0 {
+					number = big.NewRat(a, b)
+					command = strings.Replace(command, "/", "", -1)
+				}
+			}
+			// hcx,7500,dsj
+			if number.Num().Int64() == 0 {
+				a := int64(0)
+				ns := numberRegexp.FindAllString(command, -1)
+				for _, n := range ns {
+					n = strings.TrimSpace(n)
+					if n == "" {
+						continue
+					}
+					a, err = internal.UnmarshalCurrencyNumber(n, currencyType)
+					if err != nil {
+						return
+					}
+				}
+				if a == 0 {
+					err = errors.New("未探测到数字")
 					return
 				}
+				number = big.NewRat(a, 1)
 			}
-			if number == 0 {
-				err = errors.New("未探测到数字")
-				return
-			}
+		}
+		err = internal.CheckMin(useDefaultCurrencyType, number, currencyType)
+		if err != nil {
+			return
 		}
 		from := ""
 		to := ""
@@ -336,12 +378,18 @@ func main() {
 			to = ns2[1]
 		}
 		_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {
+			fromId := int64(0)
 			exist := false
-			exist, err = s.SQL("select id from user where id=? and name = ? and status=1", m.Sender.ID, from).Exist()
+			exist, err = s.SQL("select id from user where name = ? and status=1", from).Get(&fromId)
 			if err != nil {
 				return nil, err
 			}
 			if !exist {
+				return nil, errors.New("你输入的用户名(" + from +
+					")有误, 请核对后重新输入;\n或是让你伙伴(" + from +
+					")输入 /join 加入")
+			}
+			if fromId != int64(m.Sender.ID) {
 				return nil, errors.New("付款人必须是发起人")
 			}
 			toId := int64(0)
@@ -363,11 +411,11 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-			err = internal.WalletInc(s, int64(m.Sender.ID), currencyType, number, 1, commandId, m.Time())
+			err = internal.WalletInc(s, fromId, currencyType, number.Num().Int64(), number.Denom().Int64(), commandId, m.Time())
 			if err != nil {
 				return nil, err
 			}
-			err = internal.WalletInc(s, toId, currencyType, -number, 1, commandId, m.Time())
+			err = internal.WalletInc(s, toId, currencyType, -number.Num().Int64(), number.Denom().Int64(), commandId, m.Time())
 			if err != nil {
 				return nil, err
 			}
@@ -409,15 +457,9 @@ func main() {
 			useDefaultCurrencyType = cmd.UseDefaultCurrencyType
 			totalAccount = cmd.TotalMoney
 		}
-		if useDefaultCurrencyType {
-			minCurrencyTokenMustSpecify := internal.MinCurrencyTokenMustSpecify[currencyType]
-			if totalAccount < minCurrencyTokenMustSpecify {
-				err = errors.New(internal.CurrencyName[currencyType] +
-					" 总金额小于" +
-					internal.MarshalCurrencyNumber(minCurrencyTokenMustSpecify, currencyType) +
-					"，必须明确指明货币类型")
-				return
-			}
+		err = internal.CheckMin(useDefaultCurrencyType, big.NewRat(totalAccount, 1), currencyType)
+		if err != nil {
+			return
 		}
 		_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {
 			err = internal.UpdateGroupName(s, m)
