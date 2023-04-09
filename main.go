@@ -34,7 +34,9 @@ func init() {
 
 var nameRegexp = regexp.MustCompile(`[a-z]+`)
 var numberRegexp = regexp.MustCompile(`[0-9]+\.?[0-9]*`)
-var fractionRegexp = regexp.MustCompile(`([0-9]+)/([0-9]+)`)
+var fractionRegexp = regexp.MustCompile(`([0-9]+\.?[0-9]*)/([0-9]+)`)
+var p1Regexp = regexp.MustCompile(`^[a-z]{1,5}[0-9]+\.?[0-9]*,[a-z]{1,5} [a-z]$`)
+var p2Regexp = regexp.MustCompile(`^[a-z]{1,5}([0-9]+\.?[0-9]*)/([0-9]+),[a-z]{1,5} [a-z]$`)
 
 func main() {
 	token := os.Getenv("EASY_BILL_TG_TOKEN")
@@ -288,12 +290,19 @@ func main() {
 				}
 			}
 		}()
-		command := strings.ToLower(strings.TrimSpace(m.Payload))
+		raw := strings.ToLower(strings.TrimSpace(m.Payload))
+		command := ""
 		useDefaultCurrencyType := false
-		currencyType, command, useDefaultCurrencyType = internal.Parse(command)
+		currencyType, command, useDefaultCurrencyType = internal.Parse(raw)
 		if useDefaultCurrencyType {
 			err = errors.New("使用支付指令时，必须指定货币类型")
 			return
+		}
+		if !p1Regexp.Match([]byte(raw)) {
+			if !p2Regexp.Match([]byte(raw)) {
+				err = errors.New("指令格式错误, 请使用 /help 查看帮助")
+				return
+			}
 		}
 		number := big.NewRat(0, 1)
 		{
@@ -311,7 +320,11 @@ func main() {
 					if len(ab) != 2 {
 						continue
 					}
-					a, err = strconv.ParseInt(ab[0], 10, 64)
+					if a != 0 {
+						err = errors.New("探测到多个数字，请重新输入")
+						return
+					}
+					a, err = internal.UnmarshalCurrencyNumber(ab[0], currencyType)
 					if err != nil {
 						return
 					}
@@ -333,6 +346,10 @@ func main() {
 					n = strings.TrimSpace(n)
 					if n == "" {
 						continue
+					}
+					if a != 0 {
+						err = errors.New("探测到多个数字，请重新输入")
+						return
 					}
 					a, err = internal.UnmarshalCurrencyNumber(n, currencyType)
 					if err != nil {
