@@ -74,8 +74,12 @@ func main() {
 				return
 			}
 			if nameRegexp.MatchString(name) {
+				if len(name) < 2 {
+					err = errors.New("请输入姓名不能少于两个字母")
+					return
+				}
 				if len(name) > 5 {
-					err = errors.New("请输入姓名不能超过五个字符")
+					err = errors.New("请输入姓名不能超过五个字母")
 					return
 				}
 				_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {
