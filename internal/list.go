@@ -147,7 +147,7 @@ func GroupNameList(db *xorm.Engine) (a telebot.Album, err error) {
 	err = db.SQL("SELECT " +
 		" `name`," +
 		" `group_name`" +
-		" FROM user").Find(&users)
+		" FROM user where status=1").Find(&users)
 	if err != nil {
 		return nil, err
 	}

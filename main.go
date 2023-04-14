@@ -2,6 +2,7 @@ package main
 
 import (
 	"easy-bill/internal/handler"
+	"easy-bill/internal/tick"
 	"errors"
 	"fmt"
 	"log"
@@ -106,6 +107,20 @@ func main() {
 	handler.Reg(bot, "/start", func(m *telebot.Message) {
 		if m.Chat.Type == telebot.ChatPrivate {
 			log.Printf("[%s] %s", m.Chat.ID, m.Text)
+		}
+	})
+	handler.Reg(bot, "/tick", func(m *telebot.Message) {
+		if m.Chat.Type != telebot.ChatPrivate {
+			return
+		}
+		var msg string
+		var err error
+		defer func() {
+			_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, msg)
+		}()
+		msg, err = tick.Tick(db, m)
+		if err != nil {
+			msg = fmt.Sprint(err)
 		}
 	})
 	// 设置时区
