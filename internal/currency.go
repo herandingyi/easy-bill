@@ -57,7 +57,7 @@ func CheckMin(useDefaultCurrencyType bool, money *big.Rat, currencyType int) (er
 	return
 }
 func Parse(name string) (currencyType int, remain string, useDefaultCurrencyType bool) {
-	name = " " + strings.TrimSpace(name)
+	name = " " + strings.TrimSpace(strings.ToLower(name))
 	var tokens []string
 	var token string
 	useDefaultCurrencyType = true
@@ -68,9 +68,26 @@ func Parse(name string) (currencyType int, remain string, useDefaultCurrencyType
 		for _, v := range tokens {
 			v = " " + v
 			if strings.HasSuffix(name, v) {
-				useDefaultCurrencyType = false
-				token = v
-				break
+
+				hit := false
+				{
+					index := len(name) - len(v) - 1
+					if index >= 0 {
+						last := name[index]
+						// rzt,pa, k 其中 k需要算作人名; rzt,pa k 其中 k需要算作货币
+						//并且倒数 是字母
+						if last >= 97 && last <= 122 {
+							hit = true
+						}
+					} else {
+						hit = true
+					}
+				}
+				if hit {
+					useDefaultCurrencyType = false
+					token = v
+					break
+				}
 			}
 		}
 		if token != "" {
