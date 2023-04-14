@@ -23,7 +23,7 @@ var I18n = map[string]map[string]string{
 			"-----群中的指令帮助----\n\n" +
 			"/join NAME 加入EASY-BILL; 例子1: /join tk\n" +
 			"/a AA账单; 例子1: /a tk5100,rzt | 例子2: /a tk5.1,rzt u (尾部的u代表美元)\n" +
-			"/p 向某人支付; 例子1: /p tk5.1,rzt u 例子2: /p tk5/3,rzt u (支持分数)\n" +
+			"/p 向某人支付; 例子1: /p tk5.1,rzt u | 例子2: /p tk5/3,rzt u (支持分数)\n" +
 			"/l 账单; 例子1: /l | 例子2: /l u \n" +
 			"/d 分数形式账单; 例子1: /d | 例子2: /d u\n" +
 			"/group_name 昵称和群名对应表\n" +
@@ -48,7 +48,7 @@ var I18n = map[string]map[string]string{
 			"-----Group command help----\n\n" +
 			"/join NAME Join EASY-BILL; Example 1: /join tk\n" +
 			"/a AA bill; Example 1: /a tk5100,rzt | Example 2: /a tk5.1,rzt u (the u at the end represents the dollar)\n" +
-			"/p Pay someone; Example 1: /p tk5.1,rzt u Example 2: /p tk5/3,rzt u (Fractional support)\n" +
+			"/p Pay someone; Example 1: /p tk5.1,rzt u | Example 2: /p tk5/3,rzt u (Fractional support)\n" +
 			"/l Bill; Example 1: /l | Example 2: /l u \n" +
 			"/d Fractional bill; Example 1: /d | Example 2: /d u\n" +
 			"/group_name Nickname and group name correspondence table\n" +
@@ -73,7 +73,7 @@ var I18n = map[string]map[string]string{
 			"-----Групповая команда помощи----\n\n" +
 			"/join NAME Присоединиться к EASY-BILL; Пример 1: /join tk\n" +
 			"/a AA счет; Пример 1: /a tk5100,rzt | Пример 2: /a tk5.1,rzt u (u в конце означает доллар)\n" +
-			"/p Оплатить кого-то; Пример 1: /p tk5.1,rzt u Пример 2: /p tk5/3,rzt u (Поддержка дробных)\n" +
+			"/p Оплатить кого-то; Пример 1: /p tk5.1,rzt u | Пример 2: /p tk5/3,rzt u (Поддержка дробных)\n" +
 			"/l Счет; Пример 1: /l | Пример 2: /l u \n" +
 			"/d Дробный счет; Пример 1: /d | Пример 2: /d u\n" +
 			"/group_name Таблица соответствия никнеймов и названий групп\n" +
