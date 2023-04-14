@@ -410,9 +410,6 @@ func main() {
 					")有误, 请核对后重新输入;\n或是让你伙伴(" + from +
 					")输入 /join 加入")
 			}
-			if fromId != int64(m.Sender.ID) {
-				return nil, errors.New("付款人必须是发起人")
-			}
 			toId := int64(0)
 			exist, err = s.SQL("select id from user where name = ? and status=1", to).Get(&toId)
 			if err != nil {
@@ -422,6 +419,9 @@ func main() {
 				return nil, errors.New("你输入的用户名(" + to +
 					")有误, 请核对后重新输入;\n或是让你伙伴(" + to +
 					")输入 /join 加入")
+			}
+			if toId != int64(m.Sender.ID) {
+				return nil, errors.New("收款人必须是发起人")
 			}
 			var commandId int64
 			commandId, err = internal.InsertCommand(s, &models.Command{
