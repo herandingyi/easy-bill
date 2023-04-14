@@ -502,6 +502,13 @@ func main() {
 				}
 				userId2Inc[userId] = big.NewRat(0, 1).Sub(cmd.Name2PutMoney[name], useMoney)
 			}
+			// AA账单的参与者 必须包含 发起人
+			{
+				exist := false
+				if _, exist = userId2Inc[int64(m.Sender.ID)]; !exist {
+					return nil, errors.New("AA账单的参与者 必须包含 发起人")
+				}
+			}
 			var commandId int64
 			commandId, err = internal.InsertCommand(s, &models.Command{
 				SenderId:   int64(m.Sender.ID),
