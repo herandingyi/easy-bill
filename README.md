@@ -7,3 +7,10 @@ $ cd easy-bill
 $ sed -i s#1234567890:ABCD-1234abcdefghijklmnopqrstuvwxyz#your-telegram-robot-token#g docker-compose.yaml
 $ docker-compose up -d
 ```
+
+# how to upgrade easy-bill
+
+```shell
+$ docker-compose build --no-cache
+$ docker-compose up -d
+```
