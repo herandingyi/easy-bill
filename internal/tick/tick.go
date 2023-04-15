@@ -70,13 +70,13 @@ func Tick(db *xorm.Engine, m *telebot.Message) (msg string, err error) {
 			senderId := int64(m.Sender.ID)
 			ok := false
 			var v interface{}
-			v, ok = tickUserId2Vote.Load(senderId)
+			v, ok = tickUserId2Vote.Load(tickUserId)
 			if ok {
 				vote = v.(*Vote)
 			}
 			if vote == nil {
 				vote = &Vote{make(map[int64]bool), time.Now()}
-				tickUserId2Vote.Store(senderId, vote)
+				tickUserId2Vote.Store(tickUserId, vote)
 			}
 			// 如果距离 上次投票超过 72个小时 则清空投票记录
 			if time.Now().Sub(vote.updateTime) > 72*time.Hour {
