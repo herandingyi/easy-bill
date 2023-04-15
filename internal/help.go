@@ -17,6 +17,7 @@ var I18n = map[string]map[string]string{
 			"/d 分数形式个人账单明细; 例子1: /d 2\n" +
 			"/lr 个人账单报告; 例子1: /lr\n" +
 			"/dr 分数形式个人账单报告; 例子1: /dr\n" +
+			"/a 自己记账; 例子1: /a tk5100 k | 例子2: /a tk5.1 u (尾部的u代表美元)\n" +
 			"/timezone 设置个人时区; 例子1: /timezone 8 (尾部的8代表+8时区)\n" +
 			"/group_name 昵称和群名对应表\n" +
 			"/tick 投票踢人; 例子1: /tick tk\n" +
@@ -43,6 +44,7 @@ var I18n = map[string]map[string]string{
 			"/d Fractional personal bill details; Example 1: /d 2\n" +
 			"/lr Personal bill report; Example 1: /lr\n" +
 			"/dr Fractional personal bill report; Example 1: /dr\n" +
+			"/a Self-recorded bill; Example 1: /a tk5100 k | Example 2: /a tk5.1 u (the u at the end represents the dollar)\n" +
 			"/timezone Set personal time zone; Example 1: /timezone 8 (the 8 at the end represents +8 time zone)\n" +
 			"/group_name Nickname and group name correspondence table\n" +
 			"/tick Vote to kick; Example 1: /tick tk\n" +
@@ -69,6 +71,7 @@ var I18n = map[string]map[string]string{
 			"/d Дробная персональная таблица счетов; Пример 1: /d 2\n" +
 			"/lr Персональный отчет о счетах; Пример 1: /lr\n" +
 			"/dr Дробный персональный отчет о счетах; Пример 1: /dr\n" +
+			"/a Самостоятельная запись счета; Пример 1: /a tk5100 k | Пример 2: /a tk5.1 u (u в конце означает доллар)\n" +
 			"/timezone Установить персональную временную зону; Пример 1: /timezone 8 (8 в конце означает +8 временную зону)\n" +
 			"/group_name Таблица соответствия никнеймов и названий групп\n" +
 			"/tick Голосование за кик; Пример 1: /tick tk\n" +

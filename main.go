@@ -36,6 +36,7 @@ func init() {
 var nameRegexp = regexp.MustCompile(`[a-z]+`)
 var numberRegexp = regexp.MustCompile(`[0-9]+\.?[0-9]*`)
 var fractionRegexp = regexp.MustCompile(`([0-9]+\.?[0-9]*)/([0-9]+)`)
+var a1Regexp = regexp.MustCompile(`^[a-z]{1,5}[0-9]+\.?[0-9]* [a-z]$`)
 var p1Regexp = regexp.MustCompile(`^[a-z]{1,5}[0-9]+\.?[0-9]*,[a-z]{1,5} [a-z]$`)
 var p2Regexp = regexp.MustCompile(`^[a-z]{1,5}([0-9]+\.?[0-9]*)/([0-9]+),[a-z]{1,5} [a-z]$`)
 
@@ -463,9 +464,7 @@ func main() {
 	handler.Reg(bot, "/a", func(m *telebot.Message) {
 		var err error
 		var currencyType int
-		if m.Chat.Type != telebot.ChatGroup {
-			return
-		}
+
 		defer func() {
 			if err != nil {
 				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
@@ -479,7 +478,12 @@ func main() {
 				}
 			}
 		}()
-
+		if m.Chat.Type == telebot.ChatPrivate {
+			if !a1Regexp.Match([]byte(m.Payload)) {
+				err = errors.New("指令格式错误, 请使用 /help 查看帮助")
+				return
+			}
+		}
 		command := strings.ToLower(strings.TrimSpace(m.Payload))
 		useDefaultCurrencyType := false
 		totalAccount := int64(0)
