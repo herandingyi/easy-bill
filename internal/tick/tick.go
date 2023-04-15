@@ -85,7 +85,7 @@ func Tick(db *xorm.Engine, m *telebot.Message) (msg string, err error) {
 			vote.userIdMap[senderId] = true
 			vote.updateTime = time.Now()
 		}
-		min := 5
+		min := 20
 		if groupCount/2 < min {
 			min = groupCount / 2
 		}
@@ -94,6 +94,7 @@ func Tick(db *xorm.Engine, m *telebot.Message) (msg string, err error) {
 			if err != nil {
 				return
 			}
+			tickUserId2Vote.Delete(tickUserId)
 			msg = "投票成功; \n" + name + " 已被被踢出 EASY-BILL"
 		} else {
 			msg = "投票成功; \n再有 " + strconv.Itoa(min-len(vote.userIdMap)) +
