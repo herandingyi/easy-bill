@@ -74,9 +74,9 @@ func Parse(name string) (currencyType int, remain string, useDefaultCurrencyType
 					index := len(name) - len(v) - 1
 					if index >= 0 {
 						last := name[index]
-						// rzt,pa, k 其中 k需要算作人名; rzt,pa k 其中 k需要算作货币
-						//并且倒数 是字母
-						if last >= 97 && last <= 122 {
+						// rzt,pa, k 其中 k需要算作人名; rzt,pa k 其中 k需要算作货币; rzt,pa10 k 其中 k需要算作货币
+						//last 是字母或是数字
+						if (last >= 97 && last <= 122) || (last >= 48 && last <= 57) {
 							hit = true
 						}
 					} else {
