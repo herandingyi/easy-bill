@@ -86,8 +86,8 @@ func Tick(db *xorm.Engine, m *telebot.Message) (msg string, err error) {
 			vote.updateTime = time.Now()
 		}
 		min := 20
-		if groupCount/2 < min {
-			min = groupCount / 2
+		if groupCount < min {
+			min = groupCount
 		}
 		if len(vote.userIdMap) >= min {
 			_, err = s.Exec("update user set status = 0 where id = ?", tickUserId)
