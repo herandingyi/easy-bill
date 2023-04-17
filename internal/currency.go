@@ -72,6 +72,13 @@ func Parse(name string) (currencyType int, remain string, useDefaultCurrencyType
 				hit := false
 				{
 					index := len(name) - len(v) - 1
+					for index >= 0 {
+						if name[index] == ' ' {
+							index--
+						} else {
+							break
+						}
+					}
 					if index >= 0 {
 						last := name[index]
 						// rzt,pa, k 其中 k需要算作人名; rzt,pa k 其中 k需要算作货币; rzt,pa10 k 其中 k需要算作货币

@@ -80,6 +80,9 @@ func PrivateReportList(db *xorm.Engine, senderId int64, detail bool) (a telebot.
 		}
 		var aaCmd *AaCmd
 		aaCmd, err = ToAaCmd(cmd.Command)
+		if err != nil {
+			return
+		}
 		//今日开销
 		addBill(todayBill, aaCmd, name, cmd.CreateTime, now, now.Add(time.Hour*24))
 		//昨日开销
