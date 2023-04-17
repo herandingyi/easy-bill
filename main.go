@@ -33,7 +33,7 @@ func init() {
 	fmt.Print(1)
 }
 
-var nameRegexp = regexp.MustCompile(`[a-z]+`)
+var nameRegexp = regexp.MustCompile(`^[a-z]+$`)
 var numberRegexp = regexp.MustCompile(`[0-9]+\.?[0-9]*`)
 var fractionRegexp = regexp.MustCompile(`([0-9]+\.?[0-9]*)/([0-9]+)`)
 var a1Regexp = regexp.MustCompile(`^[a-z]{1,5}[0-9]+\.?[0-9]* [a-z]$`)
@@ -70,38 +70,37 @@ func main() {
 
 		}()
 		if m.Chat.Type == telebot.ChatGroup {
-			name = strings.ToLower(strings.TrimSpace(m.Payload))
+			name = strings.TrimSpace(m.Payload)
 			if name == "" {
 				err = errors.New("请输入姓名 如 /join zs")
 				return
 			}
-			if nameRegexp.MatchString(name) {
-				if len(name) < 2 {
-					err = errors.New("请输入姓名不能少于两个字母")
-					return
-				}
-				if len(name) > 5 {
-					err = errors.New("请输入姓名不能超过五个字母")
-					return
-				}
-				_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {
-					_, err = s.Exec("insert "+
-						"into user(id,name,status,timezone,group_name) values(?,?,1,0,?)"+
-						" on duplicate key update"+
-						" status=1"+
-						",group_name=?",
-						m.Sender.ID, name,
-						internal.GetGroupName(m),
-						internal.GetGroupName(m))
-					if err != nil {
-						return
-					}
-					return
-				})
-			} else {
+			if !nameRegexp.MatchString(name) {
 				err = errors.New("姓名只能包含小写字母")
 				return
 			}
+			if len(name) < 2 {
+				err = errors.New("请输入姓名不能少于两个字母")
+				return
+			}
+			if len(name) > 5 {
+				err = errors.New("请输入姓名不能超过五个字母")
+				return
+			}
+			_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {
+				_, err = s.Exec("insert "+
+					"into user(id,name,status,timezone,group_name) values(?,?,1,0,?)"+
+					" on duplicate key update"+
+					" status=1"+
+					",group_name=?",
+					m.Sender.ID, name,
+					internal.GetGroupName(m),
+					internal.GetGroupName(m))
+				if err != nil {
+					return
+				}
+				return
+			})
 		}
 	})
 	// 账单明细 从最近一次结清开始显示
