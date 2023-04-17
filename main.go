@@ -60,12 +60,17 @@ func main() {
 	}
 	handler.Reg(bot, "/join", func(m *telebot.Message) {
 		var err error
+		var oldName string
 		var name string
 		defer func() {
 			if err != nil {
 				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
-				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, name+"成功加入")
+				if oldName != "" {
+					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, oldName+"成功加入")
+				} else {
+					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, name+"成功加入")
+				}
 			}
 
 		}()
@@ -87,7 +92,12 @@ func main() {
 				err = errors.New("请输入姓名不能超过五个字母")
 				return
 			}
+
 			_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {
+				_, err = s.SQL("select name from user where id=? for update", m.Sender.ID).Get(&oldName)
+				if err != nil {
+					return
+				}
 				_, err = s.Exec("insert "+
 					"into user(id,name,status,timezone,group_name) values(?,?,1,0,?)"+
 					" on duplicate key update"+
