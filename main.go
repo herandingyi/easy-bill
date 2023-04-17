@@ -37,6 +37,7 @@ var nameRegexp = regexp.MustCompile(`^[a-z]+$`)
 var numberRegexp = regexp.MustCompile(`[0-9]+\.?[0-9]*`)
 var fractionRegexp = regexp.MustCompile(`([0-9]+\.?[0-9]*)/([0-9]+)`)
 var a1Regexp = regexp.MustCompile(`^[a-z]{1,5}[0-9]+\.?[0-9]* [a-z]$`)
+var pNameRegexp = regexp.MustCompile(`[a-z]+`)
 var p1Regexp = regexp.MustCompile(`^[a-z]{1,5}[0-9]+\.?[0-9]*,[a-z]{1,5} [a-z]$`)
 var p2Regexp = regexp.MustCompile(`^[a-z]{1,5}([0-9]+\.?[0-9]*)/([0-9]+),[a-z]{1,5} [a-z]$`)
 
@@ -406,7 +407,7 @@ func main() {
 				if u == "" {
 					continue
 				}
-				ns1 = append(ns1, nameRegexp.FindAllString(u, -1)...)
+				ns1 = append(ns1, pNameRegexp.FindAllString(u, -1)...)
 			}
 			ns2 := make([]string, 0, len(ns0))
 			for _, u := range ns1 {
@@ -731,7 +732,7 @@ func main() {
 				if u == "" {
 					continue
 				}
-				ns1 = append(ns1, nameRegexp.FindAllString(u, -1)...)
+				ns1 = append(ns1, pNameRegexp.FindAllString(u, -1)...)
 			}
 			ns2 := make([]string, 0, len(ns0))
 			for _, u := range ns1 {
