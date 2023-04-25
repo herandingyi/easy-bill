@@ -19,30 +19,24 @@ func PrivateReportList(db *xorm.Engine, senderId int64, detail bool) (a telebot.
 	if err != nil {
 		return
 	}
-	//ALTER TABLE `command`
-	//ADD INDEX `idx_create_time`(`create_time`) USING BTREE;
-	//ALTER TABLE `user`
-	//ADD COLUMN `language` varchar(8) NOT NULL DEFAULT 'zh' COMMENT '语言' AFTER `group_name`;
-	//当日 00:00:00
-	now := time.Now().UTC()
-	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-	//本月1号 00:00:00
-	thisMonth := now.AddDate(0, 0, -now.Day()+1)
-	//上个月1号
-	lastMonth := now.AddDate(0, -1, -now.Day()+1)
 	cmds := make([]*models.Command, 0, 600)
-	err = db.SQL("SELECT "+
-		" command.command,"+
-		" command.args,"+
-		" command.create_time"+
-		" FROM command FORCE INDEX (idx_create_time)"+
-		" where create_time > ?", lastMonth).Find(&cmds)
-	if err != nil {
-		return
+	{
+		now := time.Now().UTC()
+		now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+		err = db.SQL("SELECT "+
+			" command.command,"+
+			" command.args,"+
+			" command.create_time"+
+			" FROM command FORCE INDEX (idx_create_time)"+
+			" where create_time > ?", now.AddDate(0, -1, -now.Day()+2)).Find(&cmds)
+		if err != nil {
+			return
+		}
+		for _, cmd := range cmds {
+			cmd.CreateTime = FixTime(cmd.CreateTime, timezone)
+		}
 	}
-	for _, cmd := range cmds {
-		cmd.CreateTime = FixTime(cmd.CreateTime, timezone)
-	}
+
 	initBill := func() (bill []*big.Rat) {
 		bill = make([]*big.Rat, len(CurrencyName))
 		for i := range bill {
@@ -50,6 +44,11 @@ func PrivateReportList(db *xorm.Engine, senderId int64, detail bool) (a telebot.
 		}
 		return
 	}
+	now := time.Now().UTC()
+	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	now = now.Add(time.Hour * time.Duration(timezone))
+	thisMonth := now.AddDate(0, 0, -now.Day()+1)
+	lastMonth := now.AddDate(0, -1, -now.Day()+1)
 	addBill := func(bill []*big.Rat, aaCmd *AaCmd, name string, createTime, start, end time.Time) {
 		if createTime.After(start) && createTime.Before(end) {
 			spendBill := aaCmd.Name2UseMoney[name]
