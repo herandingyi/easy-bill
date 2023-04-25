@@ -221,9 +221,11 @@ func main() {
 				withId = true
 				cmd = strings.TrimSpace(strings.TrimPrefix(cmd, "id"))
 			}
-			page, err = strconv.Atoi(cmd)
-			if err != nil {
-				return
+			if cmd != "" {
+				page, err = strconv.Atoi(cmd)
+				if err != nil {
+					return
+				}
 			}
 		}
 	}
