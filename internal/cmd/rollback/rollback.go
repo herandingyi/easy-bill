@@ -99,7 +99,7 @@ where wallet_log.command_id = ?
 				return
 			}
 			if len(walletLogs) == 0 {
-				return nil, errors.New("你输入的命令无法找到")
+				return nil, errors.New("需要撤销的指令无法找到")
 			}
 			senderId := int64(m.Sender.ID)
 			containSelf := false
@@ -110,20 +110,20 @@ where wallet_log.command_id = ?
 				}
 			}
 			if !containSelf {
-				return nil, errors.New("你输入的命令与你无关，无法撤销")
+				return nil, errors.New("需要撤销的指令与你无关，无法撤销")
 			}
 		}
 		if len(walletLogs) == 1 {
 			if m.Chat.Type == telebot.ChatGroup {
-				return nil, errors.New("该撤销命令由只有你一人参与，请在个人聊天中输入")
+				return nil, errors.New("需要撤销的指令由只有你一人参与，请在个人聊天中输入")
 			}
 		} else {
 			if m.Chat.Type == telebot.ChatPrivate {
-				return nil, errors.New("该撤销命令由多个人参与，请在群组聊天中输入")
+				return nil, errors.New("需要撤销的指令由多个人参与，请在群组聊天中输入")
 			}
 		}
 		mCommand := &models.Command{}
-		// 检查命令, 输入是否合法
+		// 检查指令, 输入是否合法
 		{
 			exist := false
 			exist, err = s.SQL("select * from command where id = ? for update", commandId).Get(mCommand)
@@ -131,13 +131,13 @@ where wallet_log.command_id = ?
 				return
 			}
 			if !exist {
-				return nil, errors.New("你输入的命令无法找到")
+				return nil, errors.New("需要撤销的指令无法找到")
 			}
 			if mCommand.Status != 1 {
-				return nil, errors.New("你输入的命令已经被撤销")
+				return nil, errors.New("需要撤销的指令已经被撤销")
 			}
 			if mCommand.Command != commandArg {
-				return nil, fmt.Errorf("你输入的命令参数错误, 请重新下面指令输入： /rollback %d:%s", commandId, mCommand.Command)
+				return nil, fmt.Errorf("需要撤销的指令参数错误, 请尝试输入： /rollback %d:%s", commandId, mCommand.Command)
 			}
 		}
 		//开始投票
