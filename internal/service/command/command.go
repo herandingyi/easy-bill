@@ -1,8 +1,9 @@
-package internal
+package command
 
 import (
 	"database/sql"
 	"easy-bill/internal/models"
+	"easy-bill/internal/service/currency"
 	"encoding/json"
 	"math/big"
 	"regexp"
@@ -11,6 +12,7 @@ import (
 	"xorm.io/xorm"
 )
 
+var nameRegexp = regexp.MustCompile(`[a-z]+`)
 var SplitRegexp = regexp.MustCompile(`[,，。:;>]`)
 
 func FixTime(t time.Time, timezone int) time.Time {
@@ -82,7 +84,7 @@ func ToAaCmd(text string) (cmd *AaCmd, err error) {
 	names := make([]string, 0, 5)
 	var currencyType int
 	{
-		currencyType, command, useDefaultCurrencyType = Parse(command)
+		currencyType, command, useDefaultCurrencyType = currency.Parse(command)
 		//  hcx7500, hr, dsj100
 		userStr := command
 		ua := SplitRegexp.Split(userStr, -1)
@@ -113,7 +115,7 @@ func ToAaCmd(text string) (cmd *AaCmd, err error) {
 				if account == "" {
 					continue
 				}
-				a, err = UnmarshalCurrencyNumber(account, currencyType)
+				a, err = currency.UnmarshalCurrencyNumber(account, currencyType)
 				if err != nil {
 					return
 				}

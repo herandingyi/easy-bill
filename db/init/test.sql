@@ -94,9 +94,9 @@ CREATE TABLE `wallet_log`
     `after_numerator`    bigint   NOT NULL,
     `after_denominator`  bigint   NOT NULL,
     `create_time`        datetime NOT NULL,
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    KEY `command_id_user_id_index` (`command_id`, `user_id`) USING BTREE
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 93
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci;
-

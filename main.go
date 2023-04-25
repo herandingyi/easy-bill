@@ -2,7 +2,11 @@ package main
 
 import (
 	"easy-bill/internal/cmd/kick"
+	"easy-bill/internal/cmd/rollback"
 	"easy-bill/internal/handler"
+	"easy-bill/internal/service/command"
+	"easy-bill/internal/service/currency"
+	"easy-bill/internal/service/wallet"
 	"errors"
 	"fmt"
 	"log"
@@ -134,6 +138,20 @@ func main() {
 			msg = fmt.Sprint(err)
 		}
 	})
+	handler.Reg(bot, "/rollback", func(m *telebot.Message) {
+		if m.Chat.Type == telebot.ChatPrivate {
+			return
+		}
+		var msg string
+		var err error
+		defer func() {
+			_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, msg)
+		}()
+		msg, err = rollback.Rollback(db, m)
+		if err != nil {
+			msg = fmt.Sprint(err)
+		}
+	})
 	// 设置时区
 	handler.Reg(bot, "/timezone", func(m *telebot.Message) {
 		var err error
@@ -183,12 +201,13 @@ func main() {
 			return
 		}
 		page := 1
+		withId := false
 		defer func() {
 			if err != nil {
 				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
 				var bill telebot.Album
-				bill, err = internal.PrivateList(db, int64(m.Sender.ID), detail, page)
+				bill, err = internal.PrivateList(db, int64(m.Sender.ID), detail, withId, page)
 				if err != nil {
 					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
@@ -197,9 +216,13 @@ func main() {
 			}
 		}()
 		if m.Payload != "" {
-			page, err = strconv.Atoi(m.Payload)
-			if err != nil {
-				return
+			if m.Payload == "id" {
+				withId = true
+			} else {
+				page, err = strconv.Atoi(m.Payload)
+				if err != nil {
+					return
+				}
 			}
 		}
 	}
@@ -238,7 +261,7 @@ func main() {
 			} else {
 				var bill telebot.Album
 				var currencyType int
-				currencyType, _, _ = internal.Parse(strings.TrimSpace(m.Payload))
+				currencyType, _, _ = currency.Parse(strings.TrimSpace(m.Payload))
 				bill, err = internal.WalletList(db, currencyType, detail)
 				if err != nil {
 					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
@@ -321,9 +344,9 @@ func main() {
 			}
 		}()
 		raw := strings.ToLower(strings.TrimSpace(m.Payload))
-		command := ""
+		commandStr := ""
 		useDefaultCurrencyType := false
-		currencyType, command, useDefaultCurrencyType = internal.Parse(raw)
+		currencyType, commandStr, useDefaultCurrencyType = currency.Parse(raw)
 		if useDefaultCurrencyType {
 			err = errors.New("使用支付指令时，必须指定货币类型")
 			return
@@ -340,7 +363,7 @@ func main() {
 			{
 				a := int64(0)
 				b := int64(0)
-				ns := fractionRegexp.FindAllString(command, -1)
+				ns := fractionRegexp.FindAllString(commandStr, -1)
 				for _, n := range ns {
 					n = strings.TrimSpace(n)
 					if n == "" {
@@ -354,7 +377,7 @@ func main() {
 						err = errors.New("探测到多个数字，请重新输入")
 						return
 					}
-					a, err = internal.UnmarshalCurrencyNumber(ab[0], currencyType)
+					a, err = currency.UnmarshalCurrencyNumber(ab[0], currencyType)
 					if err != nil {
 						return
 					}
@@ -365,13 +388,13 @@ func main() {
 				}
 				if a != 0 {
 					number = big.NewRat(a, b)
-					command = strings.Replace(command, "/", "", -1)
+					commandStr = strings.Replace(commandStr, "/", "", -1)
 				}
 			}
 			// hcx,7500,dsj
 			if number.Num().Int64() == 0 {
 				a := int64(0)
-				ns := numberRegexp.FindAllString(command, -1)
+				ns := numberRegexp.FindAllString(commandStr, -1)
 				for _, n := range ns {
 					n = strings.TrimSpace(n)
 					if n == "" {
@@ -381,7 +404,7 @@ func main() {
 						err = errors.New("探测到多个数字，请重新输入")
 						return
 					}
-					a, err = internal.UnmarshalCurrencyNumber(n, currencyType)
+					a, err = currency.UnmarshalCurrencyNumber(n, currencyType)
 					if err != nil {
 						return
 					}
@@ -393,14 +416,14 @@ func main() {
 				number = big.NewRat(a, 1)
 			}
 		}
-		err = internal.CheckMin(useDefaultCurrencyType, number, currencyType)
+		err = currency.CheckMin(useDefaultCurrencyType, number, currencyType)
 		if err != nil {
 			return
 		}
 		from := ""
 		to := ""
 		{
-			ns0 := numberRegexp.Split(command, -1)
+			ns0 := numberRegexp.Split(commandStr, -1)
 			ns1 := make([]string, 0, len(ns0))
 			for _, u := range ns0 {
 				u = strings.TrimSpace(u)
@@ -450,7 +473,7 @@ func main() {
 				return nil, errors.New("收款人必须是发起人")
 			}
 			var commandId int64
-			commandId, err = internal.InsertCommand(s, &models.Command{
+			commandId, err = command.InsertCommand(s, &models.Command{
 				SenderId:   int64(m.Sender.ID),
 				Command:    m.Text,
 				CreateTime: m.Time(),
@@ -458,11 +481,11 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-			err = internal.WalletInc(s, fromId, currencyType, number.Num().Int64(), number.Denom().Int64(), commandId, m.Time())
+			err = wallet.WalletInc(s, fromId, currencyType, number.Num().Int64(), number.Denom().Int64(), commandId, m.Time())
 			if err != nil {
 				return nil, err
 			}
-			err = internal.WalletInc(s, toId, currencyType, -number.Num().Int64(), number.Denom().Int64(), commandId, m.Time())
+			err = wallet.WalletInc(s, toId, currencyType, -number.Num().Int64(), number.Denom().Int64(), commandId, m.Time())
 			if err != nil {
 				return nil, err
 			}
@@ -494,11 +517,11 @@ func main() {
 				return
 			}
 		}
-		command := strings.ToLower(strings.TrimSpace(m.Payload))
+		commandStr := strings.ToLower(strings.TrimSpace(m.Payload))
 		useDefaultCurrencyType := false
 		totalAccount := int64(0)
-		var cmd *internal.AaCmd
-		cmd, err = internal.ToAaCmd(command)
+		var cmd *command.AaCmd
+		cmd, err = command.ToAaCmd(commandStr)
 		{
 			if err != nil {
 				return
@@ -507,7 +530,7 @@ func main() {
 			useDefaultCurrencyType = cmd.UseDefaultCurrencyType
 			totalAccount = cmd.TotalMoney
 		}
-		err = internal.CheckMin(useDefaultCurrencyType, big.NewRat(totalAccount, 1), currencyType)
+		err = currency.CheckMin(useDefaultCurrencyType, big.NewRat(totalAccount, 1), currencyType)
 		if err != nil {
 			return
 		}
@@ -539,7 +562,7 @@ func main() {
 				}
 			}
 			var commandId int64
-			commandId, err = internal.InsertCommand(s, &models.Command{
+			commandId, err = command.InsertCommand(s, &models.Command{
 				SenderId:   int64(m.Sender.ID),
 				Command:    m.Text,
 				CreateTime: m.Time(),
@@ -548,7 +571,7 @@ func main() {
 				return nil, err
 			}
 			for userId, inc := range userId2Inc {
-				err = internal.WalletInc(s, userId, currencyType, inc.Num().Int64(), inc.Denom().Int64(), commandId, m.Time())
+				err = wallet.WalletInc(s, userId, currencyType, inc.Num().Int64(), inc.Denom().Int64(), commandId, m.Time())
 				if err != nil {
 					return nil, err
 				}
@@ -631,17 +654,17 @@ func main() {
 				}
 			}
 		}()
-		command := strings.TrimSpace(m.Payload)
+		commandStr := strings.TrimSpace(m.Payload)
 		var menuStr string
-		currencyType, menuStr, _ = internal.Parse(command)
-		me := internal.SplitRegexp.Split(menuStr, -1)
+		currencyType, menuStr, _ = currency.Parse(commandStr)
+		me := command.SplitRegexp.Split(menuStr, -1)
 
 		_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {
 			if len(me) != 4 {
 				return nil, errors.New("请输入正确的菜单信息 比如：/fma 1,卤肉饭,川渝人家,4.5 usd")
 			}
 			var price int64
-			price, err = internal.UnmarshalCurrencyNumber(me[3], currencyType)
+			price, err = currency.UnmarshalCurrencyNumber(me[3], currencyType)
 			if err != nil {
 				return
 			}
@@ -700,9 +723,9 @@ func main() {
 
 			}
 		}()
-		command := strings.ToLower(strings.TrimSpace(m.Payload))
+		commandStr := strings.ToLower(strings.TrimSpace(m.Payload))
 		// hcx,1,dsj
-		ns := numberRegexp.FindAllString(command, -1)
+		ns := numberRegexp.FindAllString(commandStr, -1)
 		menu := &models.Menu{}
 		{
 			if len(ns) == 0 {
@@ -725,7 +748,7 @@ func main() {
 		from := ""
 		to := ""
 		{
-			ns0 := numberRegexp.Split(command, -1)
+			ns0 := numberRegexp.Split(commandStr, -1)
 			ns1 := make([]string, 0, len(ns0))
 			for _, u := range ns0 {
 				u = strings.TrimSpace(u)
@@ -772,7 +795,7 @@ func main() {
 					")输入 /join 加入")
 			}
 			var commandId int64
-			commandId, err = internal.InsertCommand(s, &models.Command{
+			commandId, err = command.InsertCommand(s, &models.Command{
 				SenderId:   int64(m.Sender.ID),
 				Command:    m.Text,
 				CreateTime: m.Time(),
@@ -780,11 +803,11 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-			err = internal.WalletInc(s, fromId, currencyType, menu.Price, 1, commandId, m.Time())
+			err = wallet.WalletInc(s, fromId, currencyType, menu.Price, 1, commandId, m.Time())
 			if err != nil {
 				return nil, err
 			}
-			err = internal.WalletInc(s, toId, currencyType, -menu.Price, 1, commandId, m.Time())
+			err = wallet.WalletInc(s, toId, currencyType, -menu.Price, 1, commandId, m.Time())
 			if err != nil {
 				return nil, err
 			}

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"easy-bill/internal/service/currency"
 	"fmt"
 	"sort"
 )
@@ -29,6 +30,7 @@ var I18n = map[string]map[string]string{
 			"/l 账单; 例子1: /l | 例子2: /l u \n" +
 			"/d 分数形式账单; 例子1: /d | 例子2: /d u\n" +
 			"/group_name 昵称和群名对应表\n" +
+			"/rollback 投票撤销账单; 例子1: /rollback 1:/p rzt10,tk u | 例子2: /rollback 2:/a rzt1000,tk\n" +
 			"/help 帮助; 例子1:/help | 例子2: /help en\n\n",
 		"SupportCurrencyTable": "支持货币表:\n",
 		"SupportLanguageTable": "支持语言表:\n",
@@ -56,6 +58,7 @@ var I18n = map[string]map[string]string{
 			"/l Bill; Example 1: /l | Example 2: /l u \n" +
 			"/d Fractional bill; Example 1: /d | Example 2: /d u\n" +
 			"/group_name Nickname and group name correspondence table\n" +
+			"/rollback Vote to roll back bill; Example 1: /rollback 1:/p rzt10,tk u | Example 2: /rollback 2:/a rzt1000,tk\n" +
 			"/help Help; Example 1:/help | Example 2: /help en\n\n",
 		"SupportCurrencyTable": "Support currency table:\n",
 		"SupportLanguageTable": "Support language table:\n",
@@ -83,6 +86,7 @@ var I18n = map[string]map[string]string{
 			"/l Счет; Пример 1: /l | Пример 2: /l u \n" +
 			"/d Дробный счет; Пример 1: /d | Пример 2: /d u\n" +
 			"/group_name Таблица соответствия никнеймов и названий групп\n" +
+			"/rollback Голосование за откат счета; Пример 1: /rollback 1:/p rzt10,tk u | Пример 2: /rollback 2:/a rzt1000,tk\n" +
 			"/help Помощь; Пример 1:/help | Пример 2: /help en\n\n",
 		"SupportCurrencyTable": "Таблица поддерживаемых валют:\n",
 		"SupportLanguageTable": "Таблица поддерживаемых языков:\n",
@@ -97,9 +101,9 @@ func Help(country string) string {
 	}
 	supportToken := currentLang["SupportCurrencyTable"]
 	{
-		tokenArray := make([]string, 0, len(CurrencyTokens)-1)
+		tokenArray := make([]string, 0, len(currency.CurrencyTokens)-1)
 		tokenMap := map[string]int{}
-		for i, token := range CurrencyTokens {
+		for i, token := range currency.CurrencyTokens {
 			if i == 0 {
 				continue
 			}
@@ -109,8 +113,8 @@ func Help(country string) string {
 		sort.Strings(tokenArray)
 		for _, token := range tokenArray {
 			i := tokenMap[token]
-			supportToken += fmt.Sprint(token, ": ", CurrencyName[i])
-			if i == DefaultCurrencyType {
+			supportToken += fmt.Sprint(token, ": ", currency.CurrencyName[i])
+			if i == currency.DefaultCurrencyType {
 				supportToken += "(" + currentLang["DefaultCurrency"] + "); \n"
 			} else {
 				supportToken += "; \n"

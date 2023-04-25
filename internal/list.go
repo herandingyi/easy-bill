@@ -3,6 +3,8 @@ package internal
 import (
 	"easy-bill/internal/album"
 	"easy-bill/internal/models"
+	"easy-bill/internal/service/command"
+	currency2 "easy-bill/internal/service/currency"
 	"fmt"
 	"github.com/tucnak/telebot"
 	"math"
@@ -23,22 +25,23 @@ func PrivateReportList(db *xorm.Engine, senderId int64, detail bool) (a telebot.
 	{
 		now := time.Now().UTC()
 		now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-		err = db.SQL("SELECT "+
-			" command.command,"+
-			" command.args,"+
-			" command.create_time"+
-			" FROM command FORCE INDEX (idx_create_time)"+
-			" where create_time > ?", now.AddDate(0, -1, -now.Day()+2)).Find(&cmds)
+		err = db.SQL(`
+SELECT
+command.command,
+command.args,
+command.create_time
+FROM command FORCE INDEX (idx_create_time)
+where create_time > ?`, now.AddDate(0, -1, -now.Day()+2)).Find(&cmds)
 		if err != nil {
 			return
 		}
 		for _, cmd := range cmds {
-			cmd.CreateTime = FixTime(cmd.CreateTime, timezone)
+			cmd.CreateTime = command.FixTime(cmd.CreateTime, timezone)
 		}
 	}
 
 	initBill := func() (bill []*big.Rat) {
-		bill = make([]*big.Rat, len(CurrencyName))
+		bill = make([]*big.Rat, len(currency2.CurrencyName))
 		for i := range bill {
 			bill[i] = big.NewRat(0, 1)
 		}
@@ -49,7 +52,7 @@ func PrivateReportList(db *xorm.Engine, senderId int64, detail bool) (a telebot.
 	now = now.Add(time.Hour * time.Duration(timezone))
 	thisMonth := now.AddDate(0, 0, -now.Day()+1)
 	lastMonth := now.AddDate(0, -1, -now.Day()+1)
-	addBill := func(bill []*big.Rat, aaCmd *AaCmd, name string, createTime, start, end time.Time) {
+	addBill := func(bill []*big.Rat, aaCmd *command.AaCmd, name string, createTime, start, end time.Time) {
 		if createTime.After(start) && createTime.Before(end) {
 			spendBill := aaCmd.Name2UseMoney[name]
 			if spendBill == nil {
@@ -71,14 +74,17 @@ func PrivateReportList(db *xorm.Engine, senderId int64, detail bool) (a telebot.
 		if strings.HasPrefix(cmd.Command, "/p") {
 			continue
 		}
+		if strings.HasPrefix(cmd.Command, "/rollback") {
+			continue
+		}
 		var id2Name map[int64]string
-		_, id2Name, err = GetUserMap(cmd.Args)
+		_, id2Name, err = command.GetUserMap(cmd.Args)
 		name := id2Name[senderId]
 		if name == "" {
 			continue
 		}
-		var aaCmd *AaCmd
-		aaCmd, err = ToAaCmd(cmd.Command)
+		var aaCmd *command.AaCmd
+		aaCmd, err = command.ToAaCmd(cmd.Command)
 		if err != nil {
 			return
 		}
@@ -95,7 +101,7 @@ func PrivateReportList(db *xorm.Engine, senderId int64, detail bool) (a telebot.
 	}
 	header := []string{"货币", "今日", "昨日", "本月日均", "上月日均", "本月开销", "上月开销"}
 	body := make([][]string, 0, 5)
-	currency := GetSortCurrency()
+	currency := currency2.GetSortCurrency()
 	//获取上个月总天数
 	lastMonthDay := int(math.Ceil(float64(thisMonth.Sub(lastMonth).Hours()) / 24))
 	currMonthDay := int(math.Ceil(float64(now.Add(24*time.Hour).Sub(thisMonth).Hours()) / 24))
@@ -108,7 +114,7 @@ func PrivateReportList(db *xorm.Engine, senderId int64, detail bool) (a telebot.
 			continue
 		}
 		row := make([]string, 0, 5)
-		row = append(row, CurrencyName[i])
+		row = append(row, currency2.CurrencyName[i])
 		row = append(row, BillToString(todayBill[i], i, detail))
 		row = append(row, BillToString(yesterdayBill[i], i, detail))
 		row = append(row, BillToString(big.NewRat(1, 1).Mul(thisMonthBill[i], big.NewRat(1, int64(currMonthDay))), i, detail))
@@ -172,8 +178,8 @@ func MenuList(db *xorm.Engine) (telebot.Album, error) {
 	menus := make([]*Menu, 0, 5)
 	var sql string
 	currencyType := 1
-	decimalPlace := fmt.Sprint(CurrencyDecimalPlace[currencyType])
-	multi := fmt.Sprint(int(math.Pow(10, float64(CurrencyDecimalPlace[currencyType]))))
+	decimalPlace := fmt.Sprint(currency2.CurrencyDecimalPlace[currencyType])
+	multi := fmt.Sprint(int(math.Pow(10, float64(currency2.CurrencyDecimalPlace[currencyType]))))
 	sql = "ROUND( price / " + multi + ", " + decimalPlace + " )price,"
 	err = db.SQL("SELECT " +
 		"`code`," +
@@ -202,8 +208,8 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool) (telebot.Album, 
 	var err error
 	wallets := make([]*Wallet, 0, 5)
 	var sql string
-	decimalPlace := fmt.Sprint(CurrencyDecimalPlace[currencyType])
-	multiInt := int(math.Pow(10, float64(CurrencyDecimalPlace[currencyType])))
+	decimalPlace := fmt.Sprint(currency2.CurrencyDecimalPlace[currencyType])
+	multiInt := int(math.Pow(10, float64(currency2.CurrencyDecimalPlace[currencyType])))
 	multi := fmt.Sprint(multiInt)
 	sql = "CASE WHEN ROUND(ifnull( wallet.account_numerator, 0 )/ " + multi +
 		"/ifnull( wallet.account_denominator, 1 ), " + decimalPlace +
@@ -245,24 +251,25 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool) (telebot.Album, 
 		}
 		body = append(body, []string{wallet.Name, wallet.Remain})
 	}
-	return album.ToAlbum([]string{"NAME", "MONEY-" + CurrencyName[currencyType]}, body)
+	return album.ToAlbum([]string{"NAME", "MONEY-" + currency2.CurrencyName[currencyType]}, body)
 }
 
 func BillToString(bill *big.Rat, currencyType int, detail bool) string {
 	f, _ := bill.Float64()
-	beforeStr := MarshalCurrencyNumber(int64(f), currencyType)
+	beforeStr := currency2.MarshalCurrencyNumber(int64(f), currencyType)
 	if bill.Denom().Cmp(big.NewInt(1)) == 0 {
-		beforeStr = MarshalCurrencyNumber(bill.Num().Int64(), currencyType)
+		beforeStr = currency2.MarshalCurrencyNumber(bill.Num().Int64(), currencyType)
 	} else if detail {
-		beforeStr = MarshalCurrencyNumber(bill.Num().Int64(), currencyType) + "/" + bill.Denom().String()
+		beforeStr = currency2.MarshalCurrencyNumber(bill.Num().Int64(), currencyType) + "/" + bill.Denom().String()
 	}
 	return beforeStr
 }
 
-func PrivateList(db *xorm.Engine, userId int64, detail bool, page int) (a telebot.Album, err error) {
+func PrivateList(db *xorm.Engine, userId int64, detail, withId bool, page int) (a telebot.Album, err error) {
 	timezone := 8
 	timezone, _, _ = GetUserInfo(db, userId)
 	type Wallet struct {
+		Id                int64
 		Type              int
 		BeforeNumerator   int64
 		BeforeDenominator int64
@@ -277,7 +284,7 @@ func PrivateList(db *xorm.Engine, userId int64, detail bool, page int) (a telebo
 	logs := make([]*Wallet, 0)
 	err = db.SQL(""+
 		"select"+
-		" wallet_log.id"+
+		" command.id"+
 		",wallet_log.type"+
 		",wallet_log.before_numerator"+
 		",wallet_log.before_denominator"+
@@ -318,34 +325,38 @@ func PrivateList(db *xorm.Engine, userId int64, detail bool, page int) (a telebo
 		inc := new(big.Rat).Sub(after, before)
 
 		f, _ := before.Float64()
-		beforeStr := MarshalCurrencyNumber(int64(f), log.Type)
+		beforeStr := currency2.MarshalCurrencyNumber(int64(f), log.Type)
 		if before.Denom().Cmp(big.NewInt(1)) == 0 {
-			beforeStr = MarshalCurrencyNumber(before.Num().Int64(), log.Type)
+			beforeStr = currency2.MarshalCurrencyNumber(before.Num().Int64(), log.Type)
 		} else if detail {
-			beforeStr = MarshalCurrencyNumber(before.Num().Int64(), log.Type) + "/" + before.Denom().String()
+			beforeStr = currency2.MarshalCurrencyNumber(before.Num().Int64(), log.Type) + "/" + before.Denom().String()
 		}
 
 		f, _ = after.Float64()
-		afterStr := MarshalCurrencyNumber(int64(f), log.Type)
+		afterStr := currency2.MarshalCurrencyNumber(int64(f), log.Type)
 		if after.Denom().Cmp(big.NewInt(1)) == 0 {
-			afterStr = MarshalCurrencyNumber(after.Num().Int64(), log.Type)
+			afterStr = currency2.MarshalCurrencyNumber(after.Num().Int64(), log.Type)
 		} else if detail {
-			afterStr = MarshalCurrencyNumber(after.Num().Int64(), log.Type) + "/" + after.Denom().String()
+			afterStr = currency2.MarshalCurrencyNumber(after.Num().Int64(), log.Type) + "/" + after.Denom().String()
 		}
 
 		f, _ = inc.Float64()
-		incStr := MarshalCurrencyNumber(int64(f), log.Type)
+		incStr := currency2.MarshalCurrencyNumber(int64(f), log.Type)
 		if inc.Denom().Cmp(big.NewInt(1)) == 0 {
-			incStr = MarshalCurrencyNumber(inc.Num().Int64(), log.Type)
+			incStr = currency2.MarshalCurrencyNumber(inc.Num().Int64(), log.Type)
 		} else if detail {
-			incStr = MarshalCurrencyNumber(inc.Num().Int64(), log.Type) + "/" + inc.Denom().String()
+			incStr = currency2.MarshalCurrencyNumber(inc.Num().Int64(), log.Type) + "/" + inc.Denom().String()
 		}
-		log.CreateTime = FixTime(log.CreateTime, timezone)
-		body = append(body, []string{log.CreateTime.Format("06-01-02 15:04:05") + " " + CurrencyName[log.Type],
+		log.CreateTime = command.FixTime(log.CreateTime, timezone)
+		commandStr := log.Command
+		if withId {
+			commandStr = fmt.Sprintf("%d:%s", log.Id, log.Command)
+		}
+		body = append(body, []string{log.CreateTime.Format("06-01-02 15:04:05") + " " + currency2.CurrencyName[log.Type],
 			beforeStr,
 			incStr,
 			afterStr,
-			log.Command})
+			commandStr})
 	}
 	return album.ToAlbum([]string{pageTitle + " DATE", "BEFORE", "INC", "AFTER", "COMMAND"}, body)
 }

@@ -7,5 +7,6 @@ type Command struct {
 	SenderId   int64
 	Command    string
 	Args       string
+	Status     int // 1有效 2无效
 	CreateTime time.Time
 }
