@@ -1,8 +1,8 @@
 package main
 
 import (
+	"easy-bill/internal/cmd/kick"
 	"easy-bill/internal/handler"
-	"easy-bill/internal/tick"
 	"errors"
 	"fmt"
 	"log"
@@ -120,7 +120,7 @@ func main() {
 			log.Printf("[%s] %s", m.Chat.ID, m.Text)
 		}
 	})
-	handler.Reg(bot, "/tick", func(m *telebot.Message) {
+	handler.Reg(bot, "/kick", func(m *telebot.Message) {
 		if m.Chat.Type != telebot.ChatPrivate {
 			return
 		}
@@ -129,7 +129,7 @@ func main() {
 		defer func() {
 			_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, msg)
 		}()
-		msg, err = tick.Tick(db, m)
+		msg, err = kick.Kick(db, m)
 		if err != nil {
 			msg = fmt.Sprint(err)
 		}

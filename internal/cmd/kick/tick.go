@@ -1,4 +1,4 @@
-package tick
+package kick
 
 import (
 	"errors"
@@ -37,14 +37,14 @@ func init() {
 		}
 	}()
 }
-func Tick(db *xorm.Engine, m *telebot.Message) (msg string, err error) {
+func Kick(db *xorm.Engine, m *telebot.Message) (msg string, err error) {
 	var name string
 	if m.Chat.Type != telebot.ChatPrivate {
 		return
 	}
 	name = strings.ToLower(strings.TrimSpace(m.Payload))
 	if name == "" {
-		err = errors.New("请输入姓名 如 /tick zs")
+		err = errors.New("请输入姓名 如 /kick zs")
 		return
 	}
 	var message interface{}
