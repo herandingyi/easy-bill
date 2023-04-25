@@ -63,9 +63,6 @@ type WalletLog struct {
 
 func Rollback(db *xorm.Engine, m *telebot.Message) (msg string, err error) {
 	var cmd string
-	if m.Chat.Type != telebot.ChatGroup {
-		return
-	}
 	cmd = strings.ToLower(strings.TrimSpace(m.Payload))
 	if cmd == "" {
 		err = errors.New(HELP)
@@ -95,7 +92,7 @@ wallet_log.before_denominator,
 wallet_log.after_numerator,
 wallet_log.after_denominator
 from wallet_log FORCE INDEX (command_id_user_id_index)
-join user on user.id=wallet_log.user_id and user.status=1
+left join user on user.id=wallet_log.user_id
 where wallet_log.command_id = ?
 `, commandId).Find(&walletLogs)
 			if err != nil {
@@ -116,11 +113,20 @@ where wallet_log.command_id = ?
 				return nil, errors.New("你输入的命令与你无关，无法撤销")
 			}
 		}
+		if len(walletLogs) == 1 {
+			if m.Chat.Type == telebot.ChatGroup {
+				return nil, errors.New("该撤销命令由只有你一人参与，请在个人聊天中输入")
+			}
+		} else {
+			if m.Chat.Type == telebot.ChatPrivate {
+				return nil, errors.New("该撤销命令由多个人参与，请在群组聊天中输入")
+			}
+		}
 		mCommand := &models.Command{}
 		// 检查命令, 输入是否合法
 		{
 			exist := false
-			exist, err = s.SQL("select * from command where id = ?", commandId).Get(mCommand)
+			exist, err = s.SQL("select * from command where id = ? for update", commandId).Get(mCommand)
 			if err != nil {
 				return
 			}
@@ -133,11 +139,6 @@ where wallet_log.command_id = ?
 			if mCommand.Command != commandArg {
 				return nil, fmt.Errorf("你输入的命令参数错误, 请重新下面指令输入： /rollback %d:%s", commandId, mCommand.Command)
 			}
-		}
-		groupCount := 0
-		_, err = s.SQL("select count(*) from user where status=1").Get(&groupCount)
-		if err != nil {
-			return
 		}
 		//开始投票
 		var vote *Vote
@@ -210,7 +211,11 @@ where wallet_log.command_id = ?
 				return
 			}
 			rollbackCommandId2Vote.Delete(commandId)
-			msg = "投票成功; \n 指令 --- " + commandArg + " --- 已被撤销"
+			if m.Chat.Type == telebot.ChatGroup {
+				msg = "投票成功; \n指令 --- " + commandArg + " --- 已被撤销"
+			} else {
+				msg = "指令 --- " + commandArg + " --- 已被撤销"
+			}
 		} else {
 			leftPeople := ""
 			for i := 0; i < len(vote.Users); i++ {
@@ -225,7 +230,7 @@ where wallet_log.command_id = ?
 			msg = "投票成功; \n再有 " + leftPeople +
 				" 投票后 --- " + commandArg +
 				" --- 将被撤销, 当前票数: " + strconv.Itoa(voteCount) + "/" + strconv.Itoa(len(vote.Users)) +
-				" \n1小时内有效"
+				"\n1小时内有效"
 		}
 		return
 	})

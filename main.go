@@ -139,9 +139,6 @@ func main() {
 		}
 	})
 	handler.Reg(bot, "/rollback", func(m *telebot.Message) {
-		if m.Chat.Type == telebot.ChatPrivate {
-			return
-		}
 		var msg string
 		var err error
 		defer func() {

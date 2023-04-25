@@ -31,7 +31,7 @@ command.command,
 command.args,
 command.create_time
 FROM command FORCE INDEX (idx_create_time)
-where create_time > ?`, now.AddDate(0, -1, -now.Day()+2)).Find(&cmds)
+where create_time > ? and command.status=1`, now.AddDate(0, -1, -now.Day()+2)).Find(&cmds)
 		if err != nil {
 			return
 		}
