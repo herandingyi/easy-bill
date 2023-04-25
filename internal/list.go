@@ -232,10 +232,12 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool) (telebot.Album, 
 		return nil, err
 	}
 	body := make([][]string, 0, 5)
+	sum := big.NewRat(0, 1)
 	for _, wallet := range wallets {
 		if strings.HasSuffix(wallet.Remain, "/1") {
 			wallet.Remain = strings.TrimSuffix(wallet.Remain, "/1")
 		}
+		sum = sum.Add(sum, big.NewRat(wallet.AccountNumerator, wallet.AccountDenominator))
 		if !detail && wallet.AccountDenominator != 0 && float64(wallet.AccountNumerator)/float64(wallet.AccountDenominator) != float64(wallet.AccountNumerator/wallet.AccountDenominator) {
 			wallet.Remain = fmt.Sprintf("%0.2f", float64(wallet.AccountNumerator)/float64(wallet.AccountDenominator)/float64(multiInt))
 		}
@@ -251,7 +253,11 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool) (telebot.Album, 
 		}
 		body = append(body, []string{wallet.Name, wallet.Remain})
 	}
-	return album.ToAlbum([]string{"NAME", "MONEY-" + currency2.CurrencyName[currencyType]}, body)
+	title := "MONEY-" + currency2.CurrencyName[currencyType]
+	if sum.Num().Int64() != 0 {
+		title += "(" + sum.String() + ")"
+	}
+	return album.ToAlbum([]string{"NAME", title}, body)
 }
 
 func BillToString(bill *big.Rat, currencyType int, detail bool) string {
