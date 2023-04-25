@@ -216,13 +216,14 @@ func main() {
 			}
 		}()
 		if m.Payload != "" {
-			if m.Payload == "id" {
+			cmd := m.Payload
+			if strings.HasPrefix(cmd, "id") {
 				withId = true
-			} else {
-				page, err = strconv.Atoi(m.Payload)
-				if err != nil {
-					return
-				}
+				cmd = strings.TrimSpace(strings.TrimPrefix(cmd, "id"))
+			}
+			page, err = strconv.Atoi(cmd)
+			if err != nil {
+				return
 			}
 		}
 	}

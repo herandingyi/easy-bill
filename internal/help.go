@@ -14,7 +14,7 @@ var I18n = map[string]map[string]string{
 		"DefaultLanguage": "默认语言",
 		"DefaultCurrency": "默认货币",
 		"HelpDetail": "-----个人的指令帮助----\n\n" +
-			"/l 个人账单明细; 例子1: /l | 例子2: /l 2 (尾部的2代表第二页)\n" +
+			"/l 个人账单明细; 例子1: /l | 例子2: /l id | 例子3: /l id 2 | 例子4: /l 2 (尾部的2代表第二页)\n" +
 			"/d 分数形式个人账单明细; 例子1: /d 2\n" +
 			"/lr 个人账单报告; 例子1: /lr\n" +
 			"/dr 分数形式个人账单报告; 例子1: /dr\n" +
@@ -42,7 +42,7 @@ var I18n = map[string]map[string]string{
 		"DefaultLanguage": "Default Language",
 		"DefaultCurrency": "Default Currency",
 		"HelpDetail": "-----Personal command help----\n\n" +
-			"/l Personal bill details; Example 1: /l | Example 2: /l 2 (the 2 at the end represents the second page)\n" +
+			"/l Personal bill details; Example 1: /l | Example 2: /l id | Example 3: /l id 2 | Example 4: /l 2 (the 2 at the end represents the second page)\n" +
 			"/d Fractional personal bill details; Example 1: /d 2\n" +
 			"/lr Personal bill report; Example 1: /lr\n" +
 			"/dr Fractional personal bill report; Example 1: /dr\n" +
@@ -70,7 +70,7 @@ var I18n = map[string]map[string]string{
 		"DefaultLanguage": "Язык по умолчанию",
 		"DefaultCurrency": "Валюта по умолчанию",
 		"HelpDetail": "-----Персональная команда помощи----\n\n" +
-			"/l Персональная таблица счетов; Пример 1: /l | Пример 2: /l 2 (2 в конце означает вторую страницу)\n" +
+			"/l Персональная таблица счетов; Пример 1: /l | Пример 2: /l id | Пример 3: /l id 2 | Пример 4: /l 2 (2 в конце означает вторую страницу)\n" +
 			"/d Дробная персональная таблица счетов; Пример 1: /d 2\n" +
 			"/lr Персональный отчет о счетах; Пример 1: /lr\n" +
 			"/dr Дробный персональный отчет о счетах; Пример 1: /dr\n" +
