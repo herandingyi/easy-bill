@@ -48,7 +48,7 @@ func init() {
 	}()
 }
 
-const HELP = "请输入需要撤销id, \n如 /rollback 1:/a tk2,rzt u\n可以在个人命令中输入 /l id，查看COMMAND列"
+const HELP = "请输入需要撤销id, \n如 /rollback 1:/a tk2,rzt u\n可以在个人聊天中输入 /l id，查看COMMAND列"
 
 type WalletLog struct {
 	UserId   int64
