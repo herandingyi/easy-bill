@@ -245,11 +245,6 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool) (telebot.Album, 
 			if wallet.AccountDenominator == 0 {
 				continue
 			}
-			f := float64(wallet.AccountNumerator) / float64(wallet.AccountDenominator)
-			f = math.Abs(f)
-			if f < 0.000000001 {
-				continue
-			}
 		}
 		body = append(body, []string{wallet.Name, wallet.Remain})
 	}
