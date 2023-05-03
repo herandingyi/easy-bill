@@ -221,6 +221,7 @@ func main() {
 			if cmd != "" {
 				page, err = strconv.Atoi(cmd)
 				if err != nil {
+					err = errors.New("请输入正确的页码")
 					return
 				}
 			}
@@ -262,7 +263,7 @@ func main() {
 				var bill telebot.Album
 				var currencyType int
 				currencyType, _, _ = currency.Parse(strings.TrimSpace(m.Payload))
-				bill, err = internal.WalletList(db, currencyType, detail)
+				bill, err = internal.WalletList(db, currencyType, detail, []string{})
 				if err != nil {
 					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
@@ -330,12 +331,13 @@ func main() {
 		if m.Chat.Type != telebot.ChatGroup {
 			return
 		}
+		var names []string
 		defer func() {
 			if err != nil {
 				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
 				var bill telebot.Album
-				bill, err = internal.WalletList(db, currencyType, false)
+				bill, err = internal.WalletList(db, currencyType, false, names)
 				if err != nil {
 					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
@@ -446,6 +448,7 @@ func main() {
 			}
 			from = ns2[0]
 			to = ns2[1]
+			names = ns2
 		}
 		_, err = db.Transaction(func(s *xorm.Session) (_ interface{}, err error) {
 			fromId := int64(0)
@@ -497,13 +500,13 @@ func main() {
 	handler.Reg(bot, "/a", func(m *telebot.Message) {
 		var err error
 		var currencyType int
-
+		var names []string
 		defer func() {
 			if err != nil {
 				_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 			} else {
 				var bill telebot.Album
-				bill, err = internal.WalletList(db, currencyType, false)
+				bill, err = internal.WalletList(db, currencyType, false, names)
 				if err != nil {
 					_, _ = bot.Send(&ChatId{fmt.Sprint(m.Chat.ID)}, fmt.Sprint(err))
 				} else {
@@ -553,6 +556,7 @@ func main() {
 						")输入 /join 加入")
 				}
 				userId2Inc[userId] = big.NewRat(0, 1).Sub(cmd.Name2PutMoney[name], useMoney)
+				names = append(names, name)
 			}
 			// AA账单的参与者 必须包含 发起人
 			{

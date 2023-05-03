@@ -198,7 +198,7 @@ func MenuList(db *xorm.Engine) (telebot.Album, error) {
 	return album.ToAlbum([]string{"code", "name", "price", "supplier"}, body)
 }
 
-func WalletList(db *xorm.Engine, currencyType int, detail bool) (telebot.Album, error) {
+func WalletList(db *xorm.Engine, currencyType int, detail bool, names []string) (telebot.Album, error) {
 	type Wallet struct {
 		Name               string
 		Remain             string
@@ -231,11 +231,23 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool) (telebot.Album, 
 	if err != nil {
 		return nil, err
 	}
+	var nameMap map[string]bool
+	{
+		if len(names) != 0 {
+			nameMap = make(map[string]bool)
+			for _, name := range names {
+				nameMap[name] = true
+			}
+		}
+	}
 	body := make([][]string, 0, 5)
 	sum := big.NewRat(0, 1)
 	for _, wallet := range wallets {
 		if strings.HasSuffix(wallet.Remain, "/1") {
 			wallet.Remain = strings.TrimSuffix(wallet.Remain, "/1")
+		}
+		if wallet.AccountDenominator == 0 {
+			wallet.AccountDenominator = 1
 		}
 		sum = sum.Add(sum, big.NewRat(wallet.AccountNumerator, wallet.AccountDenominator))
 		if !detail && wallet.AccountDenominator != 0 && float64(wallet.AccountNumerator)/float64(wallet.AccountDenominator) != float64(wallet.AccountNumerator/wallet.AccountDenominator) {
@@ -246,7 +258,13 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool) (telebot.Album, 
 				continue
 			}
 		}
-		body = append(body, []string{wallet.Name, wallet.Remain})
+		if len(nameMap) != 0 {
+			if _, ok := nameMap[wallet.Name]; ok {
+				body = append(body, []string{wallet.Name, wallet.Remain})
+			}
+		} else {
+			body = append(body, []string{wallet.Name, wallet.Remain})
+		}
 	}
 	title := "MONEY-" + currency2.CurrencyName[currencyType]
 	if sum.Num().Int64() != 0 {
