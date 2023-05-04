@@ -253,8 +253,8 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool, names []string) 
 		if !detail && wallet.AccountDenominator != 0 && float64(wallet.AccountNumerator)/float64(wallet.AccountDenominator) != float64(wallet.AccountNumerator/wallet.AccountDenominator) {
 			wallet.Remain = fmt.Sprintf("%0.2f", float64(wallet.AccountNumerator)/float64(wallet.AccountDenominator)/float64(multiInt))
 		}
-		if !detail {
-			if wallet.AccountDenominator == 0 {
+		if !detail && len(nameMap) == 0 {
+			if wallet.AccountNumerator == 0 {
 				continue
 			}
 		}
