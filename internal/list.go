@@ -53,7 +53,6 @@ where create_time > ? and command.status=1`, now.AddDate(0, -1, -now.Day()+2)).F
 	}
 	now := time.Now().UTC()
 	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-	now = now.Add(time.Hour * time.Duration(timezone))
 	thisMonth := now.AddDate(0, 0, -now.Day()+1)
 	lastMonth := now.AddDate(0, -1, -now.Day()+1)
 	addBill := func(bill []*big.Rat, aaCmd *command.AaCmd, name string, createTime, start, end time.Time) {
