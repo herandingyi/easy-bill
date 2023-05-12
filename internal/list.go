@@ -9,12 +9,16 @@ import (
 	"github.com/tucnak/telebot"
 	"math"
 	"math/big"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
 	"xorm.io/xorm"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 func PrivateReportList(db *xorm.Engine, senderId int64, detail bool) (a telebot.Album, err error) {
 	timezone := 8
 	timezone, _, err = GetUserInfo(db, senderId)
@@ -266,6 +270,10 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool, names []string) 
 			body = append(body, []string{wallet.Name, wallet.Remain})
 		}
 	}
+	//添加 随机 可玩性
+	rand.Shuffle(len(body), func(i, j int) {
+		body[i], body[j] = body[j], body[i]
+	})
 	title := "MONEY-" + currency2.CurrencyName[currencyType]
 	if sum.Num().Int64() != 0 {
 		title += "(" + sum.String() + ")"
