@@ -269,10 +269,12 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool, names []string) 
 			body = append(body, []string{wallet.Name, wallet.Remain})
 		}
 	}
-	//添加 随机 可玩性
-	rand.Shuffle(len(body), func(i, j int) {
-		body[i], body[j] = body[j], body[i]
-	})
+	if len(nameMap) != 0 {
+		//添加 随机 可玩性
+		rand.Shuffle(len(body), func(i, j int) {
+			body[i], body[j] = body[j], body[i]
+		})
+	}
 	title := "MONEY-" + currency2.CurrencyName[currencyType]
 	if sum.Num().Int64() != 0 {
 		title += "(" + sum.String() + ")"
