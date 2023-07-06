@@ -127,6 +127,18 @@ func GetSortCurrency() (tokens []int) {
 	return
 }
 
+func ToCurrencyNumber(i *big.Rat, currencyType int, detail bool) (num string) {
+	if detail {
+		num = MarshalCurrencyNumber(i.Num().Int64(), currencyType) + "/" + i.Denom().String()
+	} else if i.Denom().Cmp(big.NewInt(1)) == 0 {
+		num = MarshalCurrencyNumber(i.Num().Int64(), currencyType)
+	} else {
+		f, _ := i.Float64()
+		num = MarshalCurrencyNumber(int64(f), currencyType)
+	}
+	return
+}
+
 func MarshalCurrencyNumber(i int64, currencyType int) (num string) {
 	decimalPlace := CurrencyDecimalPlace[currencyType]
 	if decimalPlace == 0 {

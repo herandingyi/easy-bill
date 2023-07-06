@@ -352,29 +352,10 @@ func PrivateList(db *xorm.Engine, userId int64, detail, withId bool, page int) (
 		after := big.NewRat(log.AfterNumerator, log.AfterDenominator)
 		inc := new(big.Rat).Sub(after, before)
 
-		f, _ := before.Float64()
-		beforeStr := currency2.MarshalCurrencyNumber(int64(f), log.Type)
-		if before.Denom().Cmp(big.NewInt(1)) == 0 {
-			beforeStr = currency2.MarshalCurrencyNumber(before.Num().Int64(), log.Type)
-		} else if detail {
-			beforeStr = currency2.MarshalCurrencyNumber(before.Num().Int64(), log.Type) + "/" + before.Denom().String()
-		}
+		beforeStr := currency2.ToCurrencyNumber(before, log.Type, detail)
+		afterStr := currency2.ToCurrencyNumber(after, log.Type, detail)
+		incStr := currency2.ToCurrencyNumber(inc, log.Type, detail)
 
-		f, _ = after.Float64()
-		afterStr := currency2.MarshalCurrencyNumber(int64(f), log.Type)
-		if after.Denom().Cmp(big.NewInt(1)) == 0 {
-			afterStr = currency2.MarshalCurrencyNumber(after.Num().Int64(), log.Type)
-		} else if detail {
-			afterStr = currency2.MarshalCurrencyNumber(after.Num().Int64(), log.Type) + "/" + after.Denom().String()
-		}
-
-		f, _ = inc.Float64()
-		incStr := currency2.MarshalCurrencyNumber(int64(f), log.Type)
-		if inc.Denom().Cmp(big.NewInt(1)) == 0 {
-			incStr = currency2.MarshalCurrencyNumber(inc.Num().Int64(), log.Type)
-		} else if detail {
-			incStr = currency2.MarshalCurrencyNumber(inc.Num().Int64(), log.Type) + "/" + inc.Denom().String()
-		}
 		log.CreateTime = command.FixTime(log.CreateTime, timezone)
 		commandStr := log.Command
 		if withId {
