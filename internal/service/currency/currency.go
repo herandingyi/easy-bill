@@ -135,7 +135,11 @@ func MarshalCurrencyNumber(i int64, currencyType int) (num string) {
 		denom := math.Pow(10, float64(decimalPlace))
 		a := i / int64(denom)
 		b := int64(math.Abs(float64(i))) % int64(denom)
-		return strconv.FormatInt(a, 10) + "." + strconv.FormatInt(b, 10)
+		if i < 0 && a == 0 {
+			return "-" + strconv.FormatInt(a, 10) + "." + strconv.FormatInt(b, 10)
+		} else {
+			return strconv.FormatInt(a, 10) + "." + strconv.FormatInt(b, 10)
+		}
 	}
 }
 
