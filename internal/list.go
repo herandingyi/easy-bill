@@ -10,6 +10,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -256,6 +257,19 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool, names []string) 
 		if !detail && wallet.AccountDenominator != 0 && float64(wallet.AccountNumerator)/float64(wallet.AccountDenominator) != float64(wallet.AccountNumerator/wallet.AccountDenominator) {
 			wallet.Remain = fmt.Sprintf("%0.2f", float64(wallet.AccountNumerator)/float64(wallet.AccountDenominator)/float64(multiInt))
 		}
+	}
+	if len(nameMap) != 0 {
+		rand.Shuffle(len(wallets), func(i, j int) {
+			wallets[i], wallets[j] = wallets[j], wallets[i]
+		})
+	} else {
+		sort.Slice(wallets, func(i, j int) bool {
+			a := float64(wallets[i].AccountNumerator) / float64(wallets[i].AccountDenominator)
+			b := float64(wallets[j].AccountNumerator) / float64(wallets[j].AccountDenominator)
+			return a > b
+		})
+	}
+	for _, wallet := range wallets {
 		if !detail && len(nameMap) == 0 {
 			if wallet.AccountNumerator == 0 {
 				continue
@@ -268,12 +282,6 @@ func WalletList(db *xorm.Engine, currencyType int, detail bool, names []string) 
 		} else {
 			body = append(body, []string{wallet.Name, wallet.Remain})
 		}
-	}
-	if len(nameMap) != 0 {
-		//添加 随机 可玩性
-		rand.Shuffle(len(body), func(i, j int) {
-			body[i], body[j] = body[j], body[i]
-		})
 	}
 	title := "MONEY-" + currency2.CurrencyName[currencyType]
 	if sum.Num().Int64() != 0 {
