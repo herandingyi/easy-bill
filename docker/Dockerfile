@@ -14,3 +14,6 @@ COPY --from=builder /app/easy-bill/simsun.ttc /app/simsun.ttc
 RUN chmod +x /app/easy-bill
 
 CMD ["/app/easy-bill"]
+
+#docker build -t herandingyi/easy-bill:latest . --no-cache
+#docker push herandingyi/easy-bill:latest

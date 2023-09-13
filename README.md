@@ -11,6 +11,6 @@ $ docker-compose up -d
 # how to upgrade easy-bill
 
 ```shell
-$ docker-compose build --no-cache
+$ docker-compose pull
 $ docker-compose up -d
 ```

@@ -12,7 +12,8 @@ services:
     ports:
       - "3307:3306"
   easy-bill:
-    build: docker
+    #build: docker
+    image: herandingyi/easy-bill:latest
     environment:
       # 测试
       EASY_BILL_TG_TOKEN: 1234567890:ABCD-1234abcdefghijklmnopqrstuvwxyz
